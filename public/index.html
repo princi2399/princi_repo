@@ -6,7 +6,7 @@
   <title>PayU Overwatch — Real-Time Monitoring & Alerts</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -16,10 +16,11 @@
       <div class="header-left">
         <div class="logo">
           <div class="logo-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </div>
           <span class="logo-text">PayU Overwatch</span>
         </div>
+        <span class="header-divider"></span>
         <span class="header-subtitle">Real-Time Monitoring & Alerts</span>
       </div>
       <div class="header-right">
@@ -27,119 +28,237 @@
           <span class="status-dot"></span>
           <span class="status-text">Connecting...</span>
         </div>
-        <button class="btn btn-clear" id="btnClear" title="Clear all alerts">Clear All</button>
-        <button class="btn btn-test" id="btnTestAlert" title="Send a test alert">Send Test Alert</button>
+        <button class="btn btn-test" id="btnTestAlert">Send Test Alert</button>
+        <button class="btn btn-webhook-details" id="btnWebhookDetails">Webhook Details</button>
       </div>
     </div>
   </header>
 
   <main class="main">
-    <!-- Webhook Endpoints Info -->
-    <section class="endpoints-banner">
-      <div class="endpoints-title">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M13 10V3L4 14h7v7l9-11h-7z" fill="currentColor"/></svg>
-        <span>Webhook Endpoints — Point Pipedream or Overwatch here</span>
-      </div>
-      <div class="endpoints-list">
-        <div class="endpoint-chip">
-          <span class="method-tag">POST</span>
-          <code id="endpointOverwatch">/webhook/overwatch</code>
-          <button class="copy-btn" data-endpoint="overwatch" title="Copy full URL">Copy</button>
+
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-badge">Real-Time Monitoring Platform</div>
+      <h1 class="hero-title">PayU Overwatch</h1>
+      <p class="hero-subtitle">Real-time anomaly detection and intelligent alerting for the PayU transactional ecosystem. Detect issues in minutes, not hours.</p>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-value">&lt; 2 min</div>
+          <div class="hero-stat-label">Detection Time</div>
         </div>
-        <div class="endpoint-chip">
-          <span class="method-tag pipedream">POST</span>
-          <code id="endpointPipedream">/webhook/pipedream</code>
-          <button class="copy-btn" data-endpoint="pipedream" title="Copy full URL">Copy</button>
+        <div class="hero-stat">
+          <div class="hero-stat-value">0&ndash;100</div>
+          <div class="hero-stat-label">Criticality Score</div>
         </div>
-        <div class="endpoint-chip">
-          <span class="method-tag generic">POST</span>
-          <code>/webhook/:any</code>
+        <div class="hero-stat">
+          <div class="hero-stat-value">3x</div>
+          <div class="hero-stat-label">Auto Retries</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value">99%+</div>
+          <div class="hero-stat-label">Uptime Target</div>
         </div>
       </div>
     </section>
 
-    <!-- Stats Cards -->
-    <section class="stats-grid" id="statsGrid">
-      <div class="stat-card">
-        <div class="stat-value" id="statTotal">0</div>
-        <div class="stat-label">Total Alerts</div>
-      </div>
-      <div class="stat-card stat-ongoing">
-        <div class="stat-value" id="statOngoing">0</div>
-        <div class="stat-label">Ongoing</div>
-      </div>
-      <div class="stat-card stat-resolved">
-        <div class="stat-value" id="statResolved">0</div>
-        <div class="stat-label">Resolved</div>
-      </div>
-      <div class="stat-card stat-high">
-        <div class="stat-value" id="statHigh">0</div>
-        <div class="stat-label">High Severity</div>
-      </div>
-      <div class="stat-card stat-medium">
-        <div class="stat-value" id="statMedium">0</div>
-        <div class="stat-label">Medium Severity</div>
-      </div>
-      <div class="stat-card stat-low">
-        <div class="stat-value" id="statLow">0</div>
-        <div class="stat-label">Low Severity</div>
-      </div>
-    </section>
-
-    <!-- Filters -->
-    <section class="filters">
-      <div class="filter-group">
-        <button class="filter-btn active" data-filter="all">All</button>
-        <button class="filter-btn" data-filter="ongoing">Ongoing</button>
-        <button class="filter-btn" data-filter="resolved">Resolved</button>
-      </div>
-      <div class="filter-group">
-        <button class="filter-btn severity-filter" data-severity="all">All Severity</button>
-        <button class="filter-btn severity-filter high" data-severity="HIGH">High</button>
-        <button class="filter-btn severity-filter medium" data-severity="MEDIUM">Medium</button>
-        <button class="filter-btn severity-filter low" data-severity="LOW">Low</button>
+    <!-- How It Works -->
+    <section class="section">
+      <h2 class="section-title">How It Works</h2>
+      <p class="section-desc">Four-stage pipeline from data ingestion to actionable alert delivery.</p>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-emoji">&#128225;</div>
+          <div class="step-label">Step 1</div>
+          <h3>Data Collection</h3>
+          <p>Ingest live transactional and performance data from PayU's ecosystem.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-emoji">&#129504;</div>
+          <div class="step-label">Step 2</div>
+          <h3>Anomaly Detection</h3>
+          <p>ML and rule-based logic detect deviations in success rates and error patterns.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-emoji">&#128276;</div>
+          <div class="step-label">Step 3</div>
+          <h3>Alert Generation</h3>
+          <p>Generate contextual alerts with affected entities, duration, and severity.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-emoji">&#128232;</div>
+          <div class="step-label">Step 4</div>
+          <h3>Notification Delivery</h3>
+          <p>Send alerts via webhook, email, or Teams for automated response.</p>
+        </div>
       </div>
     </section>
 
-    <!-- Live Alerts -->
-    <section class="alerts-section">
-      <div class="section-header">
-        <h2>Live Alert Feed</h2>
+    <!-- Key Monitoring Capabilities -->
+    <section class="section">
+      <h2 class="section-title">Key Monitoring Capabilities</h2>
+      <p class="section-desc">Comprehensive detection and alerting across the entire payment stack.</p>
+      <div class="capabilities-grid">
+        <div class="cap-card">
+          <div class="cap-icon">&#128200;</div>
+          <h3>Transaction Success Rate</h3>
+          <p>Continuously tracks success rate metrics across merchants and banks. Detects deviations and performance degradation.</p>
+        </div>
+        <div class="cap-card">
+          <div class="cap-icon">&#128269;</div>
+          <h3>Failure Pattern Detection</h3>
+          <p>Identifies sudden spikes in failure rates. Traces root causes like gateway downtimes or configuration issues.</p>
+        </div>
+        <div class="cap-card">
+          <div class="cap-icon">&#9889;</div>
+          <h3>Real-Time Anomaly Detection</h3>
+          <p>Statistical and behavioral models capture issues before merchants escalate. Contextualizes with srt_drop metrics.</p>
+        </div>
+        <div class="cap-card">
+          <div class="cap-icon">&#127970;</div>
+          <h3>Multi-Entity Monitoring</h3>
+          <p>Alert at merchant, acquirer, card scheme, or product level with selective subscriptions.</p>
+        </div>
+        <div class="cap-card">
+          <div class="cap-icon">&#127919;</div>
+          <h3>Severity Classification</h3>
+          <p>All alerts scored 0&ndash;100. Low (0&ndash;30), Medium (31&ndash;60), High (61&ndash;100) for prioritized investigation.</p>
+        </div>
+        <div class="cap-card">
+          <div class="cap-icon">&#128154;</div>
+          <h3>Continuous Health Tracking</h3>
+          <p>Tracks alert duration, auto-resolves when performance normalcy is restored. Enables benchmarking.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live Alert Feed (Real-time) -->
+    <section class="section" id="liveSection">
+      <h2 class="section-title">Live Alert Feed</h2>
+      <p class="section-desc">Real-time alerts from Overwatch webhooks. Click any card for full payload.</p>
+
+      <!-- Stats Cards -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card"><div class="stat-value" id="statTotal">0</div><div class="stat-label">Total Alerts</div></div>
+        <div class="stat-card stat-ongoing"><div class="stat-value" id="statOngoing">0</div><div class="stat-label">Ongoing</div></div>
+        <div class="stat-card stat-resolved"><div class="stat-value" id="statResolved">0</div><div class="stat-label">Resolved</div></div>
+        <div class="stat-card stat-high"><div class="stat-value" id="statHigh">0</div><div class="stat-label">High Severity</div></div>
+        <div class="stat-card stat-medium"><div class="stat-value" id="statMedium">0</div><div class="stat-label">Medium Severity</div></div>
+        <div class="stat-card stat-low"><div class="stat-value" id="statLow">0</div><div class="stat-label">Low Severity</div></div>
+      </div>
+
+      <!-- Entity Type Breakdown -->
+      <div class="entity-stats-row">
+        <div class="entity-stat-card" data-etype="merchant"><div class="entity-stat-icon">&#127978;</div><div class="entity-stat-val" id="statMerchant">0</div><div class="entity-stat-lbl">Merchant</div></div>
+        <div class="entity-stat-card" data-etype="acquirer"><div class="entity-stat-icon">&#127974;</div><div class="entity-stat-val" id="statAcquirer">0</div><div class="entity-stat-lbl">Acquirer</div></div>
+        <div class="entity-stat-card" data-etype="issuer"><div class="entity-stat-icon">&#128179;</div><div class="entity-stat-val" id="statIssuer">0</div><div class="entity-stat-lbl">Issuer</div></div>
+        <div class="entity-stat-card" data-etype="card_scheme"><div class="entity-stat-icon">&#128179;</div><div class="entity-stat-val" id="statScheme">0</div><div class="entity-stat-lbl">Scheme</div></div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters">
+        <div class="filter-group">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="ongoing">Ongoing</button>
+          <button class="filter-btn" data-filter="resolved">Resolved</button>
+        </div>
+        <div class="filter-group">
+          <button class="filter-btn severity-filter active" data-severity="all">All Severity</button>
+          <button class="filter-btn severity-filter high" data-severity="HIGH">High</button>
+          <button class="filter-btn severity-filter medium" data-severity="MEDIUM">Medium</button>
+          <button class="filter-btn severity-filter low" data-severity="LOW">Low</button>
+        </div>
+        <div class="filter-group">
+          <button class="filter-btn entity-filter active" data-entity="all">All Types</button>
+          <button class="filter-btn entity-filter etype-merchant" data-entity="merchant">Merchant</button>
+          <button class="filter-btn entity-filter etype-acquirer" data-entity="acquirer">Acquirer</button>
+          <button class="filter-btn entity-filter etype-issuer" data-entity="issuer">Issuer</button>
+          <button class="filter-btn entity-filter etype-scheme" data-entity="card_scheme">Scheme</button>
+        </div>
+      </div>
+
+      <div class="alerts-feed-header">
         <span class="alert-count" id="alertCount">0 alerts</span>
+        <button class="btn btn-sm" id="btnClear">Clear All</button>
       </div>
+
       <div class="alerts-container" id="alertsContainer">
         <div class="empty-state" id="emptyState">
           <div class="empty-icon">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 002 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="currentColor" opacity="0.2"/></svg>
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 002 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="currentColor" opacity="0.15"/></svg>
           </div>
           <h3>No alerts yet</h3>
-          <p>Alerts will appear here in real-time when webhooks are received.</p>
-          <p class="endpoint-hint">Webhook endpoint: <code>POST /webhook/overwatch</code></p>
+          <p>Alerts appear here in real-time when webhooks are received.</p>
+          <p class="endpoint-hint">Send test alerts or configure: <code>POST /webhook/overwatch</code></p>
         </div>
       </div>
     </section>
 
-    <!-- Webhook Activity Log -->
-    <section class="webhook-log-section">
-      <div class="section-header">
-        <h2>Webhook Activity Log</h2>
-        <button class="btn btn-sm" id="btnRefreshLog">Refresh</button>
+    <!-- Alert Timeline -->
+    <section class="section">
+      <h2 class="section-title">Alert Timeline</h2>
+      <p class="section-desc">Chronological view of recent alerts across all monitored entities.</p>
+      <div class="timeline-filters">
+        <button class="tl-filter active" data-tl="all">all</button>
+        <button class="tl-filter" data-tl="ongoing">ongoing</button>
+        <button class="tl-filter" data-tl="resolved">resolved</button>
       </div>
-      <div class="webhook-log-container" id="webhookLogContainer">
-        <div class="log-empty">No webhook activity yet. Send a test alert or trigger a real webhook.</div>
+      <div class="timeline-container" id="timelineContainer">
+        <div class="timeline-empty">No timeline data. Alerts will appear as they are received.</div>
       </div>
     </section>
 
-    <!-- Webhook Payload Reference -->
-    <section class="payload-section">
-      <div class="section-header">
-        <h2>Webhook Payload Structure</h2>
-        <span class="badge">Reference</span>
+    <!-- Test Curl Commands -->
+    <section class="section">
+      <h2 class="section-title">Test Alerts by Entity Type</h2>
+      <p class="section-desc">Ready-to-use curl commands for each entity type. Click to copy and run, or use the fire button to send directly.</p>
+      <div class="curl-grid">
+        <div class="curl-card">
+          <div class="curl-header">
+            <span class="curl-entity-icon">&#127978;</span>
+            <h3>Merchant Alert</h3>
+            <button class="btn btn-fire" data-type="merchant" title="Fire this alert">&#9889; Fire</button>
+          </div>
+          <pre class="curl-code" id="curlMerchant"></pre>
+          <button class="curl-copy" data-curl="merchant">Copy curl</button>
+        </div>
+        <div class="curl-card">
+          <div class="curl-header">
+            <span class="curl-entity-icon">&#127974;</span>
+            <h3>Acquirer Alert</h3>
+            <button class="btn btn-fire" data-type="acquirer" title="Fire this alert">&#9889; Fire</button>
+          </div>
+          <pre class="curl-code" id="curlAcquirer"></pre>
+          <button class="curl-copy" data-curl="acquirer">Copy curl</button>
+        </div>
+        <div class="curl-card">
+          <div class="curl-header">
+            <span class="curl-entity-icon">&#128179;</span>
+            <h3>Issuer Alert</h3>
+            <button class="btn btn-fire" data-type="issuer" title="Fire this alert">&#9889; Fire</button>
+          </div>
+          <pre class="curl-code" id="curlIssuer"></pre>
+          <button class="curl-copy" data-curl="issuer">Copy curl</button>
+        </div>
+        <div class="curl-card">
+          <div class="curl-header">
+            <span class="curl-entity-icon">&#128179;</span>
+            <h3>Scheme Alert</h3>
+            <button class="btn btn-fire" data-type="card_scheme" title="Fire this alert">&#9889; Fire</button>
+          </div>
+          <pre class="curl-code" id="curlScheme"></pre>
+          <button class="curl-copy" data-curl="card_scheme">Copy curl</button>
+        </div>
       </div>
-      <div class="payload-container">
+    </section>
+
+    <!-- Webhook Payload Structure -->
+    <section class="section">
+      <h2 class="section-title">Webhook Payload Structure</h2>
+      <p class="section-desc">Receive structured JSON payloads via POST request to your configured endpoint.</p>
+      <div class="payload-box">
         <div class="payload-header">
           <span class="method-badge">POST</span>
-          <code>/webhook/overwatch</code>
+          <code>/webhook-endpoint</code>
         </div>
         <pre class="payload-code"><code>{
   "alert_id": "e58a1a37-496e-4d49-b9bd-88b3029c97ac",
@@ -168,10 +287,10 @@
   "schema_version": "1.0"
 }</code></pre>
       </div>
-
+      <h3 class="sub-title">Key Fields</h3>
       <div class="fields-grid">
         <div class="field-item"><code>alert_id</code><span>Unique alert identifier</span></div>
-        <div class="field-item"><code>criticality_score</code><span>Severity 0–100 (Low / Medium / High)</span></div>
+        <div class="field-item"><code>criticality_score</code><span>Severity 0&ndash;100 (Low / Medium / High)</span></div>
         <div class="field-item"><code>entity_type</code><span>merchant | acquirer | card_scheme | product</span></div>
         <div class="field-item"><code>current_state</code><span>ongoing | resolved</span></div>
         <div class="field-item"><code>stats.failed_count</code><span>Number of transaction failures</span></div>
@@ -179,126 +298,98 @@
         <div class="field-item"><code>stats.zero_srt</code><span>Whether zero success rate detected</span></div>
         <div class="field-item"><code>stats.duration</code><span>Anomaly duration in minutes</span></div>
       </div>
+    </section>
 
-      <!-- Pipedream Integration Note -->
-      <div class="integration-note">
-        <div class="note-header">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          <span>Pipedream Integration</span>
-        </div>
-        <p>Payloads from Pipedream arrive wrapped in <code>steps.trigger.event</code>. This server automatically unwraps all nesting formats — direct, Pipedream, or any custom wrapper — to extract the Overwatch alert payload.</p>
-        <p>Configure your Pipedream workflow to POST to: <code>YOUR_RENDER_URL/webhook/pipedream</code></p>
+    <!-- Payload Field Explorer -->
+    <section class="section">
+      <h2 class="section-title">Payload Field Explorer</h2>
+      <p class="section-desc">Browse every field in the webhook payload with types, descriptions, and examples.</p>
+      <div class="explorer-header"><span class="field-count">16 top-level fields</span></div>
+      <div class="explorer-list" id="explorerList">
+        <!-- populated by JS -->
       </div>
     </section>
 
     <!-- Retry Configuration -->
-    <section class="retry-section">
-      <div class="section-header">
-        <h2>Retry Configuration</h2>
-      </div>
-      <div class="retry-steps">
-        <div class="retry-step">
-          <div class="retry-icon">&#9889;</div>
-          <div class="retry-label">1st Attempt</div>
-          <div class="retry-time">Immediate</div>
-        </div>
-        <div class="retry-arrow">&rarr;</div>
-        <div class="retry-step">
-          <div class="retry-icon">&#128260;</div>
-          <div class="retry-label">Retry 1</div>
-          <div class="retry-time">After 1 min</div>
-        </div>
-        <div class="retry-arrow">&rarr;</div>
-        <div class="retry-step">
-          <div class="retry-icon">&#128260;</div>
-          <div class="retry-label">Retry 2</div>
-          <div class="retry-time">After 5 min</div>
-        </div>
-        <div class="retry-arrow">&rarr;</div>
-        <div class="retry-step">
-          <div class="retry-icon">&#128260;</div>
-          <div class="retry-label">Retry 3</div>
-          <div class="retry-time">After 15 min</div>
-        </div>
-        <div class="retry-arrow">&rarr;</div>
-        <div class="retry-step retry-fail">
-          <div class="retry-icon">&#10060;</div>
-          <div class="retry-label">Give Up</div>
-          <div class="retry-time">Marked failed</div>
-        </div>
+    <section class="section">
+      <h2 class="section-title">Retry Configuration</h2>
+      <p class="section-desc">Automatic retry with exponential backoff ensures delivery reliability.</p>
+      <div class="retry-flow">
+        <div class="retry-step"><div class="retry-icon">&#9889;</div><div class="retry-label">1st Attempt</div><div class="retry-time">Immediate</div></div>
+        <div class="retry-arrow"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 12h14m-4-4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="retry-step"><div class="retry-icon">&#128260;</div><div class="retry-label">Retry 1</div><div class="retry-time">After 1 min</div></div>
+        <div class="retry-arrow"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 12h14m-4-4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="retry-step"><div class="retry-icon">&#128260;</div><div class="retry-label">Retry 2</div><div class="retry-time">After 5 min</div></div>
+        <div class="retry-arrow"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 12h14m-4-4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="retry-step"><div class="retry-icon">&#128260;</div><div class="retry-label">Retry 3</div><div class="retry-time">After 15 min</div></div>
+        <div class="retry-arrow"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 12h14m-4-4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="retry-step retry-fail"><div class="retry-icon">&#10060;</div><div class="retry-label">Give Up</div><div class="retry-time">Marked failed</div></div>
       </div>
     </section>
 
-    <!-- How It Works -->
-    <section class="how-section">
-      <div class="section-header">
-        <h2>How Overwatch Works</h2>
-      </div>
-      <div class="steps-grid">
-        <div class="step-card">
-          <div class="step-number">1</div>
-          <div class="step-icon">&#128225;</div>
-          <h3>Data Collection</h3>
-          <p>Ingest live transactional and performance data from PayU's ecosystem.</p>
-        </div>
-        <div class="step-card">
-          <div class="step-number">2</div>
-          <div class="step-icon">&#129504;</div>
-          <h3>Anomaly Detection</h3>
-          <p>ML and rule-based logic detect deviations in success rates and error patterns.</p>
-        </div>
-        <div class="step-card">
-          <div class="step-number">3</div>
-          <div class="step-icon">&#128276;</div>
-          <h3>Alert Generation</h3>
-          <p>Generate contextual alerts with affected entities, duration, and severity.</p>
-        </div>
-        <div class="step-card">
-          <div class="step-number">4</div>
-          <div class="step-icon">&#128232;</div>
-          <h3>Notification Delivery</h3>
-          <p>Send alerts via webhook, email, or Teams for automated response.</p>
-        </div>
+    <!-- Prerequisites -->
+    <section class="section">
+      <h2 class="section-title">Prerequisites</h2>
+      <p class="section-desc">Ensure your endpoint meets these requirements for reliable alert delivery.</p>
+      <div class="prereq-grid">
+        <div class="prereq-card"><div class="prereq-check">&#10003;</div><h3>HTTPS endpoint</h3><p>Publicly accessible URL on port 443</p></div>
+        <div class="prereq-card"><div class="prereq-check">&#10003;</div><h3>5s response time</h3><p>Respond within 5 seconds with HTTP 200</p></div>
+        <div class="prereq-card"><div class="prereq-check">&#10003;</div><h3>99%+ uptime</h3><p>Recommended for reliable delivery</p></div>
+        <div class="prereq-card"><div class="prereq-check">&#10003;</div><h3>JSON handling</h3><p>Parse application/json POST bodies</p></div>
       </div>
     </section>
 
     <!-- Use Cases -->
-    <section class="usecases-section">
-      <div class="section-header">
-        <h2>Use Cases & Scenarios</h2>
-      </div>
+    <section class="section">
+      <h2 class="section-title">Use Cases &amp; Scenarios</h2>
+      <p class="section-desc">Real-world scenarios where Overwatch alerts drive operational decisions.</p>
       <div class="usecases-grid">
-        <div class="usecase-card">
-          <div class="usecase-icon">&#128200;</div>
+        <div class="uc-card">
+          <div class="uc-icon">&#128200;</div>
           <h3>Merchant Performance Degradation</h3>
           <p>A merchant's transaction success rate decreases compared to historical data.</p>
-          <div class="usecase-trigger">Trigger: Metric "success_rate" with criticality score ranging low to high.</div>
+          <div class="uc-trigger">Trigger: Metric: &quot;success_rate&quot; with criticality score ranging low to high.</div>
         </div>
-        <div class="usecase-card">
-          <div class="usecase-icon">&#128680;</div>
+        <div class="uc-card">
+          <div class="uc-icon">&#128680;</div>
           <h3>Zero Success Rate Warning</h3>
           <p>All merchant transactions fail, leading to a zero success rate.</p>
-          <div class="usecase-trigger">Trigger: stats.zero_srt: true and criticality_score &ge; 60.</div>
+          <div class="uc-trigger">Trigger: stats.zero_srt: true and criticality_score &ge; 60.</div>
         </div>
-        <div class="usecase-card">
-          <div class="usecase-icon">&#128202;</div>
-          <h3>SLA Compliance & Reporting</h3>
+        <div class="uc-card">
+          <div class="uc-icon">&#128202;</div>
+          <h3>SLA Compliance &amp; Reporting</h3>
           <p>Teams require data on uptime and anomaly durations across merchants.</p>
-          <div class="usecase-trigger">Trigger: Anomaly start/end times (started_at, ended_at) notifications.</div>
+          <div class="uc-trigger">Trigger: Anomaly start/end times (started_at, ended_at) notifications.</div>
         </div>
-        <div class="usecase-card">
-          <div class="usecase-icon">&#128256;</div>
+        <div class="uc-card">
+          <div class="uc-icon">&#128256;</div>
           <h3>Intelligent Alert Routing</h3>
           <p>Dedicated teams manage specific merchants or product lines.</p>
-          <div class="usecase-trigger">Trigger: Payload entity_type and product fields for routing.</div>
+          <div class="uc-trigger">Trigger: Payload entity_type and product fields for routing.</div>
         </div>
       </div>
     </section>
+
+    <!-- Webhook Endpoints -->
+    <section class="section">
+      <h2 class="section-title">Webhook Endpoints</h2>
+      <p class="section-desc">Point Overwatch or Pipedream to any of these endpoints.</p>
+      <div class="endpoints-list">
+        <div class="ep-chip"><span class="ep-method">POST</span><code id="epOverwatch">/webhook/overwatch</code><button class="copy-btn" data-ep="overwatch">Copy URL</button></div>
+        <div class="ep-chip"><span class="ep-method pipedream">POST</span><code id="epPipedream">/webhook/pipedream</code><button class="copy-btn" data-ep="pipedream">Copy URL</button></div>
+        <div class="ep-chip"><span class="ep-method generic">POST</span><code>/webhook/:any</code><span class="ep-note">Catch-all</span></div>
+      </div>
+      <div class="integration-note">
+        <strong>Pipedream Integration:</strong> Payloads from Pipedream wrapped in <code>steps.trigger.event</code> are automatically unwrapped. Configure your workflow to POST to: <code>YOUR_RENDER_URL/webhook/pipedream</code>
+      </div>
+    </section>
+
   </main>
 
-  <!-- Alert detail modal -->
+  <!-- Alert Detail Modal -->
   <div class="modal-overlay" id="modalOverlay">
-    <div class="modal" id="alertModal">
+    <div class="modal">
       <div class="modal-header">
         <h3>Alert Details</h3>
         <button class="modal-close" id="modalClose">&times;</button>
@@ -307,8 +398,42 @@
     </div>
   </div>
 
+  <!-- Webhook Details Panel -->
+  <div class="modal-overlay" id="webhookModal">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h3>Webhook Details &amp; Activity Log</h3>
+        <button class="modal-close" id="webhookModalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="wh-section">
+          <h4>Active Endpoints</h4>
+          <div class="wh-endpoints">
+            <div class="wh-ep"><span class="ep-method">POST</span><code>/webhook/overwatch</code><span class="wh-ep-desc">Direct Overwatch alerts</span></div>
+            <div class="wh-ep"><span class="ep-method pipedream">POST</span><code>/webhook/pipedream</code><span class="wh-ep-desc">Pipedream forwarded events</span></div>
+            <div class="wh-ep"><span class="ep-method generic">POST</span><code>/webhook/:source</code><span class="wh-ep-desc">Catch-all for any source</span></div>
+          </div>
+        </div>
+        <div class="wh-section">
+          <div class="wh-section-head">
+            <h4>Recent Webhook Activity</h4>
+            <button class="btn btn-sm" id="btnRefreshLog">Refresh</button>
+          </div>
+          <div class="wh-log" id="webhookLog">
+            <div class="timeline-empty">Loading...</div>
+          </div>
+        </div>
+        <div class="wh-section">
+          <h4>Server Health</h4>
+          <div class="wh-health" id="webhookHealth">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <footer class="footer">
-    <p>PayU Overwatch Alerts Dashboard &middot; Webhook endpoint: <code>POST /webhook/overwatch</code></p>
+    <p>Need Help? Contact <a href="mailto:overwatch.support@payu.in">overwatch.support@payu.in</a></p>
+    <p class="footer-sub">PayU Overwatch &middot; Schema Version 1.0</p>
   </footer>
 
   <script src="/app.js"></script>

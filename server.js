@@ -217,8 +217,10 @@ app.get('/api/stats', (_req, res) => {
   const low = alerts.filter(a => a.severity === 'LOW').length;
   const sources = {};
   alerts.forEach(a => { sources[a.source || 'unknown'] = (sources[a.source || 'unknown'] || 0) + 1; });
+  const entity_types = {};
+  alerts.forEach(a => { entity_types[a.entity_type || 'unknown'] = (entity_types[a.entity_type || 'unknown'] || 0) + 1; });
 
-  res.json({ total: alerts.length, ongoing, resolved, high, medium, low, connected_clients: sseClients.size, sources });
+  res.json({ total: alerts.length, ongoing, resolved, high, medium, low, connected_clients: sseClients.size, sources, entity_types });
 });
 
 app.get('/api/webhook-log', (_req, res) => res.json({ log: webhookLog }));
