@@ -85,9 +85,12 @@ function dbInsert(alert) {
   });
 }
 
-function dbFetch({ state, severity, entity_type, limit = 200 } = {}) {
-  let sql = 'SELECT * FROM alerts WHERE 1=1';
-  const params = {};
+const RETENTION_DAYS = 3;
+
+function dbFetch({ state, severity, entity_type, limit = 500 } = {}) {
+  const cutoff = new Date(Date.now() - RETENTION_DAYS * 86400000).toISOString();
+  let sql = 'SELECT * FROM alerts WHERE received_at >= @cutoff';
+  const params = { cutoff };
   if (state) { sql += ' AND current_state = @state'; params.state = state; }
   if (severity) { sql += ' AND severity = @severity'; params.severity = severity.toUpperCase(); }
   if (entity_type) { sql += ' AND entity_type = @entity_type'; params.entity_type = entity_type; }
@@ -119,6 +122,7 @@ function dbFetch({ state, severity, entity_type, limit = 200 } = {}) {
 }
 
 function dbStats() {
+  const cutoff = new Date(Date.now() - RETENTION_DAYS * 86400000).toISOString();
   const row = db.prepare(`
     SELECT
       COUNT(*) as total,
@@ -127,12 +131,12 @@ function dbStats() {
       SUM(CASE WHEN severity='HIGH' THEN 1 ELSE 0 END) as high,
       SUM(CASE WHEN severity='MEDIUM' THEN 1 ELSE 0 END) as medium,
       SUM(CASE WHEN severity='LOW' THEN 1 ELSE 0 END) as low
-    FROM alerts
-  `).get();
+    FROM alerts WHERE received_at >= ?
+  `).get(cutoff);
 
   const etRows = db.prepare(`
-    SELECT entity_type, COUNT(*) as cnt FROM alerts GROUP BY entity_type
-  `).all();
+    SELECT entity_type, COUNT(*) as cnt FROM alerts WHERE received_at >= ? GROUP BY entity_type
+  `).all(cutoff);
   const entity_types = {};
   etRows.forEach(r => { entity_types[r.entity_type || 'unknown'] = r.cnt; });
 
@@ -321,6 +325,14 @@ app.delete('/api/alerts', (_req, res) => {
   }
   res.json({ status: 'cleared' });
 });
+
+function purgeOld() {
+  const cutoff = new Date(Date.now() - RETENTION_DAYS * 86400000).toISOString();
+  const { changes } = db.prepare('DELETE FROM alerts WHERE received_at < ?').run(cutoff);
+  if (changes > 0) console.log(`[PURGE] Removed ${changes} alerts older than ${RETENTION_DAYS} days`);
+}
+setInterval(purgeOld, 3600000);
+purgeOld();
 
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

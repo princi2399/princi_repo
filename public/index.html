@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PayU Overwatch — Alerts</title>
+  <title>PayU Overwatch — Real-Time Monitoring & Alerts</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -15,59 +15,164 @@
       <div class="header-left">
         <div class="logo">
           <div class="logo-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </div>
-          <span class="logo-text">Overwatch</span>
+          <span class="logo-text">PayU Overwatch</span>
         </div>
+        <span class="divider"></span>
         <div class="connection-status" id="connectionStatus">
           <span class="status-dot"></span>
           <span class="status-text">Connecting...</span>
         </div>
       </div>
-      <div class="header-stats">
-        <div class="hstat"><span class="hstat-val" id="statTotal">0</span><span class="hstat-lbl">Total</span></div>
-        <div class="hstat hstat-ongoing"><span class="hstat-val" id="statOngoing">0</span><span class="hstat-lbl">Ongoing</span></div>
-        <div class="hstat hstat-resolved"><span class="hstat-val" id="statResolved">0</span><span class="hstat-lbl">Resolved</span></div>
-        <div class="hstat hstat-high"><span class="hstat-val" id="statHigh">0</span><span class="hstat-lbl">High</span></div>
-        <div class="hstat hstat-medium"><span class="hstat-val" id="statMedium">0</span><span class="hstat-lbl">Med</span></div>
-        <div class="hstat hstat-low"><span class="hstat-val" id="statLow">0</span><span class="hstat-lbl">Low</span></div>
-      </div>
       <div class="header-right">
-        <button class="btn btn-test" id="btnTestAlert">Send Test Alert</button>
+        <div class="header-stats" id="headerStats">
+          <span class="hstat" id="statTotal" data-label="total">0</span>
+          <span class="hstat hstat-ongoing" id="statOngoing" data-label="ongoing">0</span>
+          <span class="hstat hstat-resolved" id="statResolved" data-label="resolved">0</span>
+          <span class="hstat hstat-high" id="statHigh" data-label="high">0</span>
+          <span class="hstat hstat-med" id="statMedium" data-label="med">0</span>
+          <span class="hstat hstat-low" id="statLow" data-label="low">0</span>
+        </div>
+        <button class="btn-test" id="btnTestAlert">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Test Alert
+        </button>
       </div>
     </div>
   </header>
 
-  <main class="main">
-    <div class="filters">
-      <div class="filter-group">
-        <button class="filter-btn active" data-filter="all">All</button>
-        <button class="filter-btn" data-filter="ongoing">Ongoing</button>
-        <button class="filter-btn" data-filter="resolved">Resolved</button>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-badge">Real-Time Monitoring Platform</div>
+      <h1 class="hero-title">PayU Overwatch</h1>
+      <p class="hero-sub">Real-time anomaly detection and intelligent alerting for the PayU transactional ecosystem. Detect issues in minutes, not hours.</p>
+      <div class="hero-metrics">
+        <div class="hm"><span class="hm-val">&lt; 2 min</span><span class="hm-lbl">Detection Time</span></div>
+        <div class="hm"><span class="hm-val">0–100</span><span class="hm-lbl">Criticality Score</span></div>
+        <div class="hm"><span class="hm-val">3x</span><span class="hm-lbl">Auto Retries</span></div>
+        <div class="hm"><span class="hm-val">99%+</span><span class="hm-lbl">Uptime Target</span></div>
       </div>
-      <div class="filter-group">
-        <button class="filter-btn severity-filter active" data-severity="all">All Severity</button>
-        <button class="filter-btn severity-filter high" data-severity="HIGH">High</button>
-        <button class="filter-btn severity-filter medium" data-severity="MEDIUM">Medium</button>
-        <button class="filter-btn severity-filter low" data-severity="LOW">Low</button>
-      </div>
-      <div class="filter-group">
-        <button class="filter-btn entity-filter active" data-entity="all">All Types</button>
-        <button class="filter-btn entity-filter" data-entity="merchant">Merchant</button>
-        <button class="filter-btn entity-filter" data-entity="acquirer">Acquirer</button>
-        <button class="filter-btn entity-filter" data-entity="issuer">Issuer</button>
-        <button class="filter-btn entity-filter" data-entity="card_scheme">Scheme</button>
-      </div>
-      <span class="alert-count" id="alertCount">0 alerts</span>
     </div>
+  </section>
 
-    <div class="alerts-list" id="alertsList">
-      <div class="empty-state" id="emptyState">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 002 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="currentColor" opacity="0.2"/></svg>
-        <p>No alerts yet. Send a test alert or POST to <code>/webhook/overwatch</code></p>
+  <!-- How It Works -->
+  <section class="info-section">
+    <div class="info-inner">
+      <h2 class="info-title">How It Works</h2>
+      <p class="info-desc">Four-stage pipeline from data ingestion to actionable alert delivery.</p>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-icon">📡</div>
+          <div class="step-num">Step 1</div>
+          <h3>Data Collection</h3>
+          <p>Ingest live transactional and performance data from PayU's ecosystem.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-icon">🧠</div>
+          <div class="step-num">Step 2</div>
+          <h3>Anomaly Detection</h3>
+          <p>ML and rule-based logic detect deviations in success rates and error patterns.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-icon">🔔</div>
+          <div class="step-num">Step 3</div>
+          <h3>Alert Generation</h3>
+          <p>Generate contextual alerts with affected entities, duration, and severity.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-icon">📨</div>
+          <div class="step-num">Step 4</div>
+          <h3>Notification Delivery</h3>
+          <p>Send alerts via webhook, email, or Teams for automated response.</p>
+        </div>
       </div>
     </div>
-  </main>
+  </section>
+
+  <!-- Key Monitoring Capabilities -->
+  <section class="info-section info-alt">
+    <div class="info-inner">
+      <h2 class="info-title">Key Monitoring Capabilities</h2>
+      <p class="info-desc">Comprehensive detection and alerting across the entire payment stack.</p>
+      <div class="cap-grid">
+        <div class="cap-card">
+          <div class="cap-icon">📈</div>
+          <h3>Transaction Success Rate</h3>
+          <p>Continuously tracks success rate metrics across merchants and banks. Detects deviations and performance degradation.</p>
+        </div>
+        <div class="cap-card">
+          <div class="cap-icon">🔍</div>
+          <h3>Failure Pattern Detection</h3>
+          <p>Identifies sudden spikes in failure rates. Traces root causes like gateway downtimes or configuration issues.</p>
+        </div>
+        <div class="cap-card">
+          <div class="cap-icon">⚡</div>
+          <h3>Real-Time Anomaly Detection</h3>
+          <p>Statistical and behavioral models capture issues before merchants escalate. Contextualizes with srt_drop metrics.</p>
+        </div>
+        <div class="cap-card">
+          <div class="cap-icon">🏢</div>
+          <h3>Multi-Entity Monitoring</h3>
+          <p>Alert at merchant, acquirer, card scheme, or product level with selective subscriptions.</p>
+        </div>
+        <div class="cap-card">
+          <div class="cap-icon">🎯</div>
+          <h3>Severity Classification</h3>
+          <p>All alerts scored 0–100. Low (0–30), Medium (31–60), High (61–100) for prioritized investigation.</p>
+        </div>
+        <div class="cap-card">
+          <div class="cap-icon">💚</div>
+          <h3>Continuous Health Tracking</h3>
+          <p>Tracks alert duration, auto-resolves when performance normalcy is restored. Enables benchmarking.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Live Alerts Dashboard -->
+  <section class="dash-section" id="liveAlerts">
+    <div class="dash-inner">
+      <h2 class="dash-title">Live Alert Feed <span class="dash-window">Last 3 days</span></h2>
+      <div class="toolbar">
+        <div class="filter-row">
+          <div class="filter-group">
+            <button class="fbtn active" data-filter="all">All</button>
+            <button class="fbtn" data-filter="ongoing">Ongoing</button>
+            <button class="fbtn" data-filter="resolved">Resolved</button>
+          </div>
+          <div class="filter-group">
+            <button class="fbtn sev-filter active" data-severity="all">All Severity</button>
+            <button class="fbtn sev-filter sev-high" data-severity="HIGH">High</button>
+            <button class="fbtn sev-filter sev-medium" data-severity="MEDIUM">Medium</button>
+            <button class="fbtn sev-filter sev-low" data-severity="LOW">Low</button>
+          </div>
+          <div class="filter-group">
+            <button class="fbtn ent-filter active" data-entity="all">All Entities</button>
+            <button class="fbtn ent-filter" data-entity="merchant">Merchant</button>
+            <button class="fbtn ent-filter" data-entity="acquirer">Acquirer</button>
+            <button class="fbtn ent-filter" data-entity="issuer">Issuer</button>
+            <button class="fbtn ent-filter" data-entity="card_scheme">Scheme</button>
+          </div>
+        </div>
+        <span class="alert-count" id="alertCount">0 alerts</span>
+      </div>
+      <div class="alerts" id="alertsList">
+        <div class="empty" id="emptyState">
+          <div class="empty-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 002 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="currentColor" opacity="0.15"/></svg>
+          </div>
+          <p>No alerts yet</p>
+          <p class="empty-sub">Send a test alert or POST to <code>/webhook/overwatch</code></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>PayU Overwatch · Schema Version 1.0 · Data retained for 3 days</p>
+  </footer>
 
   <script src="/app.js"></script>
 </body>
