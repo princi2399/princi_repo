@@ -87,10 +87,12 @@ function dbInsert(alert) {
 
 const RETENTION_DAYS = 3;
 
-function dbFetch({ state, severity, entity_type, limit = 500 } = {}) {
-  const cutoff = new Date(Date.now() - RETENTION_DAYS * 86400000).toISOString();
-  let sql = 'SELECT * FROM alerts WHERE received_at >= @cutoff';
-  const params = { cutoff };
+function dbFetch({ state, severity, entity_type, from, to, limit = 500 } = {}) {
+  const defaultCutoff = new Date(Date.now() - RETENTION_DAYS * 86400000).toISOString();
+  const fromDate = from || defaultCutoff;
+  let sql = 'SELECT * FROM alerts WHERE received_at >= @fromDate';
+  const params = { fromDate };
+  if (to) { sql += ' AND received_at <= @toDate'; params.toDate = to; }
   if (state) { sql += ' AND current_state = @state'; params.state = state; }
   if (severity) { sql += ' AND severity = @severity'; params.severity = severity.toUpperCase(); }
   if (entity_type) { sql += ' AND entity_type = @entity_type'; params.entity_type = entity_type; }
@@ -121,8 +123,13 @@ function dbFetch({ state, severity, entity_type, limit = 500 } = {}) {
   }));
 }
 
-function dbStats() {
-  const cutoff = new Date(Date.now() - RETENTION_DAYS * 86400000).toISOString();
+function dbStats({ from, to } = {}) {
+  const defaultCutoff = new Date(Date.now() - RETENTION_DAYS * 86400000).toISOString();
+  const fromDate = from || defaultCutoff;
+  let where = 'WHERE received_at >= ?';
+  const p = [fromDate];
+  if (to) { where += ' AND received_at <= ?'; p.push(to); }
+
   const row = db.prepare(`
     SELECT
       COUNT(*) as total,
@@ -131,12 +138,12 @@ function dbStats() {
       SUM(CASE WHEN severity='HIGH' THEN 1 ELSE 0 END) as high,
       SUM(CASE WHEN severity='MEDIUM' THEN 1 ELSE 0 END) as medium,
       SUM(CASE WHEN severity='LOW' THEN 1 ELSE 0 END) as low
-    FROM alerts WHERE received_at >= ?
-  `).get(cutoff);
+    FROM alerts ${where}
+  `).get(...p);
 
   const etRows = db.prepare(`
-    SELECT entity_type, COUNT(*) as cnt FROM alerts WHERE received_at >= ? GROUP BY entity_type
-  `).all(cutoff);
+    SELECT entity_type, COUNT(*) as cnt FROM alerts ${where} GROUP BY entity_type
+  `).all(...p);
   const entity_types = {};
   etRows.forEach(r => { entity_types[r.entity_type || 'unknown'] = r.cnt; });
 
@@ -300,13 +307,14 @@ app.patch('/webhook/:source?', handleWebhook('patch'));
 
 // ── REST API ──
 app.get('/api/alerts', (req, res) => {
-  const { state, severity, entity_type, limit = 200 } = req.query;
-  const alerts = dbFetch({ state, severity, entity_type, limit });
+  const { state, severity, entity_type, from, to, limit = 500 } = req.query;
+  const alerts = dbFetch({ state, severity, entity_type, from, to, limit });
   res.json({ total: alerts.length, alerts });
 });
 
-app.get('/api/stats', (_req, res) => {
-  const stats = dbStats();
+app.get('/api/stats', (req, res) => {
+  const { from, to } = req.query;
+  const stats = dbStats({ from, to });
   res.json({ ...stats, connected_clients: sseClients.size });
 });
 

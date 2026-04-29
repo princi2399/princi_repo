@@ -3,6 +3,7 @@
 
   const alerts = [];
   let stateF = 'all', sevF = 'all', entF = 'all';
+  let dateFrom = '', dateTo = '';
   let es = null;
 
   const $ = s => document.querySelector(s);
@@ -12,6 +13,27 @@
   const count = $('#alertCount');
   const conn = $('#connectionStatus');
   const BASE = location.origin;
+
+  function setDefaultDates(days) {
+    if (days === 0) {
+      dateFrom = ''; dateTo = '';
+      $('#dateFrom').value = ''; $('#dateTo').value = '';
+    } else {
+      const to = new Date();
+      const from = new Date(Date.now() - days * 86400000);
+      dateFrom = from.toISOString();
+      dateTo = '';
+      $('#dateFrom').value = from.toISOString().slice(0, 10);
+      $('#dateTo').value = to.toISOString().slice(0, 10);
+    }
+  }
+
+  function dateParams() {
+    const p = new URLSearchParams();
+    if (dateFrom) p.set('from', dateFrom);
+    if (dateTo) p.set('to', dateTo);
+    return p.toString();
+  }
 
   function connectSSE() {
     if (es) es.close();
@@ -39,7 +61,8 @@
 
   async function fetchAll() {
     try {
-      const r = await fetch('/api/alerts?limit=500');
+      const dp = dateParams();
+      const r = await fetch(`/api/alerts?limit=500${dp ? '&' + dp : ''}`);
       const d = await r.json();
       alerts.length = 0;
       d.alerts.forEach(a => alerts.push(a));
@@ -49,7 +72,8 @@
 
   async function stats() {
     try {
-      const r = await fetch('/api/stats');
+      const dp = dateParams();
+      const r = await fetch(`/api/stats${dp ? '?' + dp : ''}`);
       const s = await r.json();
       $('#statTotal').childNodes[0].textContent = s.total;
       $('#statOngoing').childNodes[0].textContent = s.ongoing;
@@ -244,6 +268,23 @@
     catch { return ''; }
   }
 
+  $('#btnApplyDate').onclick = () => {
+    const f = $('#dateFrom').value;
+    const t = $('#dateTo').value;
+    dateFrom = f ? new Date(f).toISOString() : '';
+    dateTo = t ? new Date(t + 'T23:59:59').toISOString() : '';
+    $$('.dr-quick').forEach(b => b.classList.remove('active'));
+    fetchAll();
+  };
+
+  $$('.dr-quick').forEach(b => b.onclick = () => {
+    $$('.dr-quick').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    setDefaultDates(parseInt(b.dataset.days, 10));
+    fetchAll();
+  });
+
+  setDefaultDates(3);
   connectSSE();
   fetchAll();
 })();

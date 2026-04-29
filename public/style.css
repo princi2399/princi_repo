@@ -246,6 +246,35 @@ body {
   background: rgba(255,255,255,0.06); padding: 3px 10px; border-radius: 10px;
 }
 
+/* ── Date Range ── */
+.date-range {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 14px; flex-wrap: wrap;
+}
+.date-range label {
+  font-size: 11px; color: rgba(255,255,255,0.4); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.3px;
+}
+.date-range input[type="date"] {
+  padding: 6px 10px; border-radius: var(--rs);
+  border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04);
+  color: #fff; font-size: 12px; font-family: var(--font); outline: none;
+}
+.date-range input[type="date"]:focus { border-color: var(--teal); }
+.date-range input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(0.7); cursor: pointer;
+}
+.dr-btn {
+  padding: 6px 12px; border-radius: var(--rs);
+  border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 600;
+  cursor: pointer; font-family: var(--font); transition: all 0.12s;
+}
+.dr-btn:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); }
+.dr-btn#btnApplyDate { background: var(--teal); color: white; border-color: var(--teal); }
+.dr-btn#btnApplyDate:hover { opacity: 0.85; }
+.dr-btn.dr-quick.active { background: rgba(255,255,255,0.12); color: #fff; border-color: rgba(255,255,255,0.2); }
+
 /* ── Toolbar (dark) ── */
 .toolbar {
   display: flex; align-items: center; justify-content: space-between;

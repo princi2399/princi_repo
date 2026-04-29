@@ -134,7 +134,19 @@
   <!-- Live Alerts Dashboard -->
   <section class="dash-section" id="liveAlerts">
     <div class="dash-inner">
-      <h2 class="dash-title">Live Alert Feed <span class="dash-window">Last 3 days</span></h2>
+      <h2 class="dash-title">Live Alert Feed</h2>
+      <div class="date-range">
+        <label>From</label>
+        <input type="date" id="dateFrom">
+        <label>To</label>
+        <input type="date" id="dateTo">
+        <button class="dr-btn" id="btnApplyDate">Apply</button>
+        <button class="dr-btn dr-quick active" data-days="3">3D</button>
+        <button class="dr-btn dr-quick" data-days="7">7D</button>
+        <button class="dr-btn dr-quick" data-days="14">14D</button>
+        <button class="dr-btn dr-quick" data-days="30">30D</button>
+        <button class="dr-btn dr-quick" data-days="0">All</button>
+      </div>
       <div class="toolbar">
         <div class="filter-row">
           <div class="filter-group">
