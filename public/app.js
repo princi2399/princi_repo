@@ -14,23 +14,11 @@
   const conn = $('#connectionStatus');
   const BASE = location.origin;
 
-  let livePollTimer = null;
-
-  function startLivePoll(ms) {
-    if (livePollTimer) return;
-    livePollTimer = setInterval(() => { fetchAll(); stats(); }, ms);
-  }
-
-  function stopLivePoll() {
-    if (livePollTimer) {
-      clearInterval(livePollTimer);
-      livePollTimer = null;
-    }
-  }
-
-  function setConnStatus(text, state) {
-    conn.className = 'connection-status ' + (state || '');
-    conn.querySelector('.status-text').textContent = text;
+  function fmtLocalYmd(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   }
 
   function setDefaultDates(days) {
@@ -39,11 +27,14 @@
       $('#dateFrom').value = ''; $('#dateTo').value = '';
     } else {
       const to = new Date();
-      const from = new Date(Date.now() - days * 86400000);
+      const from = new Date();
+      from.setDate(from.getDate() - days);
+      from.setHours(0, 0, 0, 0);
+      to.setHours(23, 59, 59, 999);
       dateFrom = from.toISOString();
-      dateTo = '';
-      $('#dateFrom').value = from.toISOString().slice(0, 10);
-      $('#dateTo').value = to.toISOString().slice(0, 10);
+      dateTo = to.toISOString();
+      $('#dateFrom').value = fmtLocalYmd(from);
+      $('#dateTo').value = fmtLocalYmd(to);
     }
   }
 
@@ -54,34 +45,59 @@
     return p.toString();
   }
 
+  let sseFallbackTimer = null;
+  let ssePollTimer = null;
+
+  function clearSsePoll() {
+    if (ssePollTimer) {
+      clearInterval(ssePollTimer);
+      ssePollTimer = null;
+    }
+  }
+
+  function startSsePollingMode() {
+    clearSsePoll();
+    conn.className = 'connection-status connected';
+    conn.querySelector('.status-text').textContent = 'Live (polling)';
+    ssePollTimer = setInterval(() => { fetchAll(); stats(); }, 12000);
+    fetchAll();
+    stats();
+  }
+
   function connectSSE() {
     if (es) {
       es.close();
       es = null;
     }
-    es = new EventSource('/api/alerts/stream');
+    if (sseFallbackTimer) clearTimeout(sseFallbackTimer);
+    clearSsePoll();
 
-    const openTimer = setTimeout(() => {
-      if (es && es.readyState !== EventSource.OPEN) {
-        setConnStatus('Live (polling)', 'connected');
-        startLivePoll(15000);
+    conn.className = 'connection-status';
+    conn.querySelector('.status-text').textContent = 'Connecting...';
+
+    let opened = false;
+    sseFallbackTimer = setTimeout(() => {
+      if (!opened) {
+        if (es) {
+          es.close();
+          es = null;
+        }
+        startSsePollingMode();
       }
-    }, 4000);
+    }, 6000);
 
+    es = new EventSource('/api/alerts/stream');
     es.onopen = () => {
-      clearTimeout(openTimer);
-      stopLivePoll();
-      setConnStatus('Connected', 'connected');
+      opened = true;
+      if (sseFallbackTimer) clearTimeout(sseFallbackTimer);
+      clearSsePoll();
+      conn.className = 'connection-status connected';
+      conn.querySelector('.status-text').textContent = 'Connected';
     };
     es.onmessage = e => {
       try {
         const d = JSON.parse(e.data);
-        if (d.type === 'connected') { fetchAll(); stats(); return; }
-        if (d.type === 'error') {
-          setConnStatus('Live (polling)', 'connected');
-          startLivePoll(15000);
-          return;
-        }
+        if (d.type === 'connected') { fetchAll(); return; }
         if (d.type === 'cleared') { alerts.length = 0; render(); stats(); return; }
         if (d.type === 'refresh') { fetchAll(); stats(); return; }
         d._new = true;
@@ -90,13 +106,9 @@
       } catch (_) {}
     };
     es.onerror = () => {
-      clearTimeout(openTimer);
-      setConnStatus('Reconnecting…', 'error');
-      startLivePoll(15000);
-      try {
-        es.close();
-      } catch (_) {}
-      es = null;
+      if (!opened) return;
+      conn.className = 'connection-status error';
+      conn.querySelector('.status-text').textContent = 'Disconnected';
       setTimeout(connectSSE, 3000);
     };
   }
@@ -313,8 +325,8 @@
   $('#btnApplyDate').onclick = () => {
     const f = $('#dateFrom').value;
     const t = $('#dateTo').value;
-    dateFrom = f ? new Date(f).toISOString() : '';
-    dateTo = t ? new Date(t + 'T23:59:59').toISOString() : '';
+    dateFrom = f ? new Date(`${f}T00:00:00.000`).toISOString() : '';
+    dateTo = t ? new Date(`${t}T23:59:59.999`).toISOString() : '';
     $$('.dr-quick').forEach(b => b.classList.remove('active'));
     fetchAll();
   };

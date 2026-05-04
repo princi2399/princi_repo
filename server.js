@@ -172,41 +172,44 @@ async function bootstrap() {
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
-    if (typeof res.flushHeaders === 'function') res.flushHeaders();
+    if (req.socket) {
+      req.socket.setTimeout(0);
+      if (typeof req.socket.setNoDelay === 'function') req.socket.setNoDelay(true);
+    }
+    res.flushHeaders();
     res.write(': stream\n\n');
 
-    let keepAlive = null;
-    let closed = false;
-    const cleanup = () => {
-      if (closed) return;
-      closed = true;
-      if (keepAlive) clearInterval(keepAlive);
-      sseClients.delete(res);
-    };
-    req.on('close', cleanup);
-    req.on('aborted', cleanup);
-
     (async () => {
+      let total = 0;
       try {
-        const total = await store.count();
-        if (closed) return;
-        res.write(`data: ${JSON.stringify({ type: 'connected', count: total })}\n\n`);
-        sseClients.add(res);
-        keepAlive = setInterval(() => {
-          try {
-            res.write(': keep-alive\n\n');
-          } catch (_) {
-            cleanup();
-          }
-        }, 25000);
+        total = await store.count();
       } catch (e) {
-        try {
-          res.write(`data: ${JSON.stringify({ type: 'error', message: String(e.message) })}\n\n`);
-        } catch (_) {}
-        try {
-          res.end();
-        } catch (_) {}
+        console.error('[SSE] count', e);
       }
+      if (req.aborted || res.writableEnded) return;
+      try {
+        res.write(`data: ${JSON.stringify({ type: 'connected', count: total })}\n\n`);
+      } catch (_) {
+        return;
+      }
+      sseClients.add(res);
+      let cleaned = false;
+      let keepAlive = null;
+      const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
+        if (keepAlive) clearInterval(keepAlive);
+        sseClients.delete(res);
+      };
+      keepAlive = setInterval(() => {
+        try {
+          res.write(': keep-alive\n\n');
+        } catch (_) {
+          cleanup();
+        }
+      }, 25000);
+      req.on('close', cleanup);
+      res.on('close', cleanup);
     })();
   });
 
@@ -257,7 +260,8 @@ async function bootstrap() {
   app.get('/api/alerts', async (req, res) => {
     try {
       const { state, severity, entity_type, from, to, limit = 2000 } = req.query;
-      const alerts = await store.fetch({ state, severity, entity_type, from, to, limit });
+      const lim = Math.min(Math.max(parseInt(limit, 10) || 2000, 1), 5000);
+      const alerts = await store.fetch({ state, severity, entity_type, from, to, limit: lim });
       res.json({ total: alerts.length, alerts });
     } catch (err) {
       res.status(500).json({ error: err.message });
