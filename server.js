@@ -56,6 +56,10 @@ function extractOverwatchPayload(raw) {
   }
   if (Array.isArray(raw)) return raw.length > 0 ? extractOverwatchPayload(raw[0]) : null;
   if (raw.alert_id) return raw;
+  if (raw.trigger?.event) {
+    const inner = extractOverwatchPayload(raw.trigger.event);
+    if (inner?.alert_id) return inner;
+  }
   if (raw.body && typeof raw.body === 'object' && raw.body.alert_id) return raw.body;
   if (typeof raw.body === 'string') {
     const parsed = tryParseJSON(raw.body);
@@ -71,12 +75,16 @@ function extractOverwatchPayload(raw) {
       const parsed = tryParseJSON(evt);
       if (parsed) return extractOverwatchPayload(parsed);
     }
-    if (evt.alert_id) return evt;
-    if (evt.body) {
+    if (evt && typeof evt === 'object' && evt.alert_id) return evt;
+    if (evt?.body !== undefined && evt?.body !== null) {
       const body = typeof evt.body === 'string' ? tryParseJSON(evt.body) : evt.body;
       if (body?.alert_id) return body;
+      if (body && typeof body === 'object') {
+        const fromBody = extractOverwatchPayload(body);
+        if (fromBody?.alert_id) return fromBody;
+      }
     }
-    if (evt.url && typeof evt.body === 'object') return extractOverwatchPayload(evt.body);
+    if (evt?.url && typeof evt.body === 'object' && evt.body) return extractOverwatchPayload(evt.body);
     const nested = deepFindAlertPayload(evt);
     if (nested) return nested;
   }
@@ -174,6 +182,18 @@ async function bootstrap() {
   app.put('/webhook/:source?', handleWebhook('put'));
   app.patch('/webhook/:source?', handleWebhook('patch'));
 
+  app.get('/api/config', (req, res) => {
+    const proto = (req.get('x-forwarded-proto') || req.protocol || 'https').split(',')[0].trim();
+    const host = (req.get('x-forwarded-host') || req.get('host') || 'localhost').split(',')[0].trim();
+    const base = (process.env.PUBLIC_BASE_URL || `${proto}://${host}`).replace(/\/$/, '');
+    res.json({
+      public_base: base,
+      webhook_overwatch: `${base}/webhook/overwatch`,
+      webhook_pipedream: `${base}/webhook/pipedream`,
+      alerts_stream_sse: `${base}/api/alerts/stream`
+    });
+  });
+
   app.get('/api/alerts', async (req, res) => {
     try {
       const { state, severity, entity_type, from, to, limit = 500 } = req.query;
@@ -242,7 +262,7 @@ async function bootstrap() {
     const count = await store.count();
     console.log(`\n  PayU Overwatch Alerts on port ${PORT} | ${count} alerts | DB: ${store.kind} | retention ${RETENTION_DAYS}d`);
     console.log(`  POST /webhook/overwatch | POST /webhook/pipedream | POST /webhook/:any`);
-    console.log(`  GET  /api/alerts | /api/alerts/stream | /api/stats | /api/health\n`);
+    console.log(`  GET  /api/config | /api/alerts | /api/alerts/stream | /api/stats | /api/health\n`);
   });
 }
 

@@ -285,6 +285,38 @@
   });
 
   setDefaultDates(30);
+
+  async function loadWebhookConfig() {
+    const panel = $('#webhookInteg');
+    if (!panel) return;
+    try {
+      const r = await fetch('/api/config');
+      const c = await r.json();
+      $('#webhookUrlPipedream').textContent = c.webhook_pipedream;
+      $('#webhookUrlOverwatch').textContent = c.webhook_overwatch;
+      const sseEl = $('#sseUrl');
+      if (sseEl) sseEl.textContent = c.alerts_stream_sse;
+    } catch (_) {}
+  }
+
+  const integPanel = $('#webhookInteg');
+  if (integPanel) {
+    integPanel.querySelectorAll('.integ-copy').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-target');
+        const el = document.getElementById(id);
+        if (!el) return;
+        try {
+          await navigator.clipboard.writeText(el.textContent);
+          const t = btn.textContent;
+          btn.textContent = 'Copied';
+          setTimeout(() => { btn.textContent = t; }, 1500);
+        } catch (_) {}
+      });
+    });
+  }
+
+  loadWebhookConfig();
   connectSSE();
   fetchAll();
 })();
