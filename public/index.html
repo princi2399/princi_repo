@@ -42,6 +42,57 @@
     </div>
   </header>
 
+  <!-- Live Alerts Dashboard (primary) -->
+  <section class="dash-section" id="liveAlerts">
+    <div class="dash-inner">
+      <h2 class="dash-title">Live Alert Feed</h2>
+      <div class="date-range">
+        <label>From</label>
+        <input type="date" id="dateFrom">
+        <label>To</label>
+        <input type="date" id="dateTo">
+        <button class="dr-btn" id="btnApplyDate">Apply</button>
+        <button class="dr-btn dr-quick" data-days="3">3D</button>
+        <button class="dr-btn dr-quick" data-days="7">7D</button>
+        <button class="dr-btn dr-quick" data-days="14">14D</button>
+        <button class="dr-btn dr-quick active" data-days="30">30D</button>
+        <button class="dr-btn dr-quick" data-days="0">All</button>
+      </div>
+      <div class="toolbar">
+        <div class="filter-row">
+          <div class="filter-group">
+            <button class="fbtn active" data-filter="all">All</button>
+            <button class="fbtn" data-filter="ongoing">Ongoing</button>
+            <button class="fbtn" data-filter="resolved">Resolved</button>
+          </div>
+          <div class="filter-group">
+            <button class="fbtn sev-filter active" data-severity="all">All Severity</button>
+            <button class="fbtn sev-filter sev-high" data-severity="HIGH">High</button>
+            <button class="fbtn sev-filter sev-medium" data-severity="MEDIUM">Medium</button>
+            <button class="fbtn sev-filter sev-low" data-severity="LOW">Low</button>
+          </div>
+          <div class="filter-group">
+            <button class="fbtn ent-filter active" data-entity="all">All Entities</button>
+            <button class="fbtn ent-filter" data-entity="merchant">Merchant</button>
+            <button class="fbtn ent-filter" data-entity="acquirer">Acquirer</button>
+            <button class="fbtn ent-filter" data-entity="issuer">Issuer</button>
+            <button class="fbtn ent-filter" data-entity="card_scheme">Scheme</button>
+          </div>
+        </div>
+        <span class="alert-count" id="alertCount">0 alerts</span>
+      </div>
+      <div class="alerts" id="alertsList">
+        <div class="empty" id="emptyState">
+          <div class="empty-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 002 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="currentColor" opacity="0.15"/></svg>
+          </div>
+          <p>No alerts yet</p>
+          <p class="empty-sub">Send a test alert or POST to <code>/webhook/overwatch</code></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Hero -->
   <section class="hero">
     <div class="hero-inner">
@@ -131,59 +182,8 @@
     </div>
   </section>
 
-  <!-- Live Alerts Dashboard -->
-  <section class="dash-section" id="liveAlerts">
-    <div class="dash-inner">
-      <h2 class="dash-title">Live Alert Feed</h2>
-      <div class="date-range">
-        <label>From</label>
-        <input type="date" id="dateFrom">
-        <label>To</label>
-        <input type="date" id="dateTo">
-        <button class="dr-btn" id="btnApplyDate">Apply</button>
-        <button class="dr-btn dr-quick active" data-days="3">3D</button>
-        <button class="dr-btn dr-quick" data-days="7">7D</button>
-        <button class="dr-btn dr-quick" data-days="14">14D</button>
-        <button class="dr-btn dr-quick" data-days="30">30D</button>
-        <button class="dr-btn dr-quick" data-days="0">All</button>
-      </div>
-      <div class="toolbar">
-        <div class="filter-row">
-          <div class="filter-group">
-            <button class="fbtn active" data-filter="all">All</button>
-            <button class="fbtn" data-filter="ongoing">Ongoing</button>
-            <button class="fbtn" data-filter="resolved">Resolved</button>
-          </div>
-          <div class="filter-group">
-            <button class="fbtn sev-filter active" data-severity="all">All Severity</button>
-            <button class="fbtn sev-filter sev-high" data-severity="HIGH">High</button>
-            <button class="fbtn sev-filter sev-medium" data-severity="MEDIUM">Medium</button>
-            <button class="fbtn sev-filter sev-low" data-severity="LOW">Low</button>
-          </div>
-          <div class="filter-group">
-            <button class="fbtn ent-filter active" data-entity="all">All Entities</button>
-            <button class="fbtn ent-filter" data-entity="merchant">Merchant</button>
-            <button class="fbtn ent-filter" data-entity="acquirer">Acquirer</button>
-            <button class="fbtn ent-filter" data-entity="issuer">Issuer</button>
-            <button class="fbtn ent-filter" data-entity="card_scheme">Scheme</button>
-          </div>
-        </div>
-        <span class="alert-count" id="alertCount">0 alerts</span>
-      </div>
-      <div class="alerts" id="alertsList">
-        <div class="empty" id="emptyState">
-          <div class="empty-icon">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 002 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="currentColor" opacity="0.15"/></svg>
-          </div>
-          <p>No alerts yet</p>
-          <p class="empty-sub">Send a test alert or POST to <code>/webhook/overwatch</code></p>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <footer class="footer">
-    <p>PayU Overwatch · Schema Version 1.0 · Data retained for 3 days</p>
+    <p>PayU Overwatch · Schema Version 1.0 · Data retained for 30 days</p>
   </footer>
 
   <script src="/app.js"></script>

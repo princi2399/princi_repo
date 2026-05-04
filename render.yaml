@@ -1,3 +1,6 @@
+# Web service only. For alert persistence on Render: create a Render Postgres (or any Postgres),
+# then add env var DATABASE_URL (Internal Database URL) on this service. Free web dynos use an
+# ephemeral disk, so SQLite alone is cleared on restart unless DATABASE_URL is set.
 services:
   - type: web
     name: overwatch-alerts

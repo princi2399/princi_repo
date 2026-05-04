@@ -284,7 +284,7 @@
     fetchAll();
   });
 
-  setDefaultDates(3);
+  setDefaultDates(30);
   connectSSE();
   fetchAll();
 })();
