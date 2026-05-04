@@ -10,6 +10,18 @@ app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.use(express.text({ type: 'text/*', limit: '5mb' }));
 app.use(express.raw({ type: 'application/octet-stream', limit: '5mb' }));
+
+/** Learn public origin from traffic so self-wake works without manual env (runs before static). */
+let requestDerivedPublicBase = '';
+app.use((req, _res, next) => {
+  const proto = (req.get('x-forwarded-proto') || req.protocol || 'https').split(',')[0].trim();
+  const host = (req.get('x-forwarded-host') || req.get('host') || '').split(',')[0].trim();
+  if (host && !/^127\.0\.0\.1$|^localhost$|^\[::1\]$/i.test(host)) {
+    requestDerivedPublicBase = `${proto}://${host}`.replace(/\/$/, '');
+  }
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 const RETENTION_DAYS = parseInt(process.env.RETENTION_DAYS || '30', 10);
@@ -17,9 +29,11 @@ const KEEPALIVE_MINUTES = parseInt(process.env.KEEPALIVE_MINUTES || '15', 10);
 const KEEPALIVE_MS = Math.max(1, KEEPALIVE_MINUTES) * 60 * 1000;
 const PORT = process.env.PORT || 3000;
 
-/** Render sets RENDER_EXTERNAL_URL; optional override PUBLIC_BASE_URL */
+/** Env override, then Render default, then last seen Host from real requests */
 function selfWakeBaseUrl() {
-  return (process.env.PUBLIC_BASE_URL || process.env.RENDER_EXTERNAL_URL || '').trim().replace(/\/$/, '');
+  return (process.env.PUBLIC_BASE_URL || process.env.RENDER_EXTERNAL_URL || requestDerivedPublicBase || '')
+    .trim()
+    .replace(/\/$/, '');
 }
 
 const sseClients = new Set();
