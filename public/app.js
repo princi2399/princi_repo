@@ -143,6 +143,7 @@
     if (stateF !== 'all') f = f.filter(a => a.current_state === stateF);
     if (sevF !== 'all') f = f.filter(a => a.severity === sevF);
     if (entF !== 'all') f = f.filter(a => a.entity_type === entF);
+    f.sort((a, b) => (b.received_at || '').localeCompare(a.received_at || ''));
 
     count.textContent = `${f.length} alert${f.length !== 1 ? 's' : ''}`;
 

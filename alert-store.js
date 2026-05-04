@@ -121,7 +121,7 @@ function createSqliteStore(retentionDays) {
       if (state) { sql += ' AND current_state = @state'; params.state = state; }
       if (severity) { sql += ' AND severity = @severity'; params.severity = severity.toUpperCase(); }
       if (entity_type) { sql += ' AND entity_type = @entity_type'; params.entity_type = entity_type; }
-      sql += ' ORDER BY id DESC LIMIT @limit';
+      sql += ' ORDER BY received_at DESC, id DESC LIMIT @limit';
       params.limit = parseInt(limit, 10);
       return db.prepare(sql).all(params).map(mapRow);
     },
@@ -231,7 +231,7 @@ function createPgStore(pool, retentionDays) {
       if (state) { sql += ` AND current_state = $${i++}`; params.push(state); }
       if (severity) { sql += ` AND severity = $${i++}`; params.push(severity.toUpperCase()); }
       if (entity_type) { sql += ` AND entity_type = $${i++}`; params.push(entity_type); }
-      sql += ` ORDER BY id DESC LIMIT $${i}`;
+      sql += ` ORDER BY received_at DESC, id DESC LIMIT $${i}`;
       params.push(parseInt(limit, 10));
       const { rows } = await pool.query(sql, params);
       return rows.map(mapRow);
