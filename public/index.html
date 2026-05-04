@@ -46,21 +46,6 @@
   <section class="dash-section" id="liveAlerts">
     <div class="dash-inner">
       <h2 class="dash-title">Live Alert Feed</h2>
-      <div class="integ-panel" id="webhookInteg">
-        <p class="integ-lead">Real-time path: PayU Overwatch → your Pipedream URL (<code>steps.trigger.event.url</code>) → forward to this app → dashboard updates instantly via SSE.</p>
-        <div class="integ-row">
-          <span class="integ-lbl">Pipedream HTTP step — POST here</span>
-          <code class="integ-url" id="webhookUrlPipedream">…</code>
-          <button type="button" class="integ-copy" data-target="webhookUrlPipedream">Copy</button>
-        </div>
-        <div class="integ-row">
-          <span class="integ-lbl">Direct Overwatch — POST here</span>
-          <code class="integ-url" id="webhookUrlOverwatch">…</code>
-          <button type="button" class="integ-copy" data-target="webhookUrlOverwatch">Copy</button>
-        </div>
-        <p class="integ-hint">In Pipedream add <strong>HTTP Request</strong>: method <strong>POST</strong>, URL from above, body <code>{{steps.trigger.event}}</code> or, if the alert JSON is only inside the request body, <code>{{steps.trigger.event.body}}</code>. Content-Type <code>application/json</code>.</p>
-        <p class="integ-hint integ-hint-sub">Browser live stream: <code id="sseUrl">…</code> (connected automatically). Refetch every <span id="refreshMins">15</span> min. On Render free tier, set env <code>PUBLIC_BASE_URL</code> to this site’s URL so the server can self-call <code>/api/health</code> on the same interval and reduce sleep.</p>
-      </div>
       <div class="date-range">
         <label>From</label>
         <input type="date" id="dateFrom">

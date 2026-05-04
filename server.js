@@ -17,6 +17,11 @@ const KEEPALIVE_MINUTES = parseInt(process.env.KEEPALIVE_MINUTES || '15', 10);
 const KEEPALIVE_MS = Math.max(1, KEEPALIVE_MINUTES) * 60 * 1000;
 const PORT = process.env.PORT || 3000;
 
+/** Render sets RENDER_EXTERNAL_URL; optional override PUBLIC_BASE_URL */
+function selfWakeBaseUrl() {
+  return (process.env.PUBLIC_BASE_URL || process.env.RENDER_EXTERNAL_URL || '').trim().replace(/\/$/, '');
+}
+
 const sseClients = new Set();
 
 function broadcastAlert(alert) {
@@ -195,7 +200,7 @@ async function bootstrap() {
   app.get('/api/config', (req, res) => {
     const proto = (req.get('x-forwarded-proto') || req.protocol || 'https').split(',')[0].trim();
     const host = (req.get('x-forwarded-host') || req.get('host') || 'localhost').split(',')[0].trim();
-    const base = (process.env.PUBLIC_BASE_URL || `${proto}://${host}`).replace(/\/$/, '');
+    const base = (selfWakeBaseUrl() || `${proto}://${host}`).replace(/\/$/, '');
     res.json({
       public_base: base,
       webhook_overwatch: `${base}/webhook/overwatch`,
@@ -203,9 +208,7 @@ async function bootstrap() {
       alerts_stream_sse: `${base}/api/alerts/stream`,
       refresh_interval_ms: KEEPALIVE_MS,
       refresh_interval_minutes: KEEPALIVE_MINUTES,
-      self_wake_enabled: Boolean(
-        (process.env.PUBLIC_BASE_URL || '').trim() && process.env.DISABLE_SELF_WAKE !== '1'
-      )
+      self_wake_enabled: Boolean(selfWakeBaseUrl() && process.env.DISABLE_SELF_WAKE !== '1')
     });
   });
 
@@ -270,7 +273,7 @@ async function bootstrap() {
   await purgeOld();
 
   async function selfWakePing() {
-    const base = (process.env.PUBLIC_BASE_URL || '').trim().replace(/\/$/, '');
+    const base = selfWakeBaseUrl();
     if (!base || process.env.DISABLE_SELF_WAKE === '1') return;
     try {
       const u = new URL('/api/health', `${base}/`);
@@ -303,12 +306,8 @@ async function bootstrap() {
     console.log(`\n  PayU Overwatch Alerts on port ${PORT} | ${count} alerts | DB: ${store.kind} | retention ${RETENTION_DAYS}d`);
     console.log(`  POST /webhook/overwatch | POST /webhook/pipedream | POST /webhook/:any`);
     console.log(`  GET  /api/config | /api/alerts | /api/alerts/stream | /api/stats | /api/health`);
-    console.log(`  Keepalive: every ${KEEPALIVE_MINUTES}m → SSE refresh + optional self-wake (set PUBLIC_BASE_URL on Render)`);
-    if (process.env.RENDER === 'true' && !(process.env.PUBLIC_BASE_URL || '').trim()) {
-      console.log(`  [TIP] Set PUBLIC_BASE_URL=https://<your-app>.onrender.com so the service can self-ping /api/health and reduce free-tier sleep.\n`);
-    } else {
-      console.log('');
-    }
+    const wake = selfWakeBaseUrl();
+    console.log(`  Keepalive: every ${KEEPALIVE_MINUTES}m → SSE refresh${wake ? ' + self-wake → ' + wake + '/api/health' : ''}\n`);
   });
 }
 

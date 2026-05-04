@@ -289,43 +289,21 @@
 
   let keepalivePollTimer = null;
 
-  async function loadWebhookConfig() {
-    const panel = $('#webhookInteg');
-    if (!panel) return;
+  async function scheduleKeepaliveFromServer() {
     try {
       const r = await fetch('/api/config');
       const c = await r.json();
-      $('#webhookUrlPipedream').textContent = c.webhook_pipedream;
-      $('#webhookUrlOverwatch').textContent = c.webhook_overwatch;
-      const sseEl = $('#sseUrl');
-      if (sseEl) sseEl.textContent = c.alerts_stream_sse;
-
       const interval = Number(c.refresh_interval_ms) > 0 ? Number(c.refresh_interval_ms) : 15 * 60 * 1000;
-      const rm = $('#refreshMins');
-      if (rm && c.refresh_interval_minutes != null) rm.textContent = String(c.refresh_interval_minutes);
       if (keepalivePollTimer) clearInterval(keepalivePollTimer);
       keepalivePollTimer = setInterval(() => { fetchAll(); stats(); }, interval);
-    } catch (_) {}
+    } catch (_) {
+      if (!keepalivePollTimer) {
+        keepalivePollTimer = setInterval(() => { fetchAll(); stats(); }, 15 * 60 * 1000);
+      }
+    }
   }
 
-  const integPanel = $('#webhookInteg');
-  if (integPanel) {
-    integPanel.querySelectorAll('.integ-copy').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.getAttribute('data-target');
-        const el = document.getElementById(id);
-        if (!el) return;
-        try {
-          await navigator.clipboard.writeText(el.textContent);
-          const t = btn.textContent;
-          btn.textContent = 'Copied';
-          setTimeout(() => { btn.textContent = t; }, 1500);
-        } catch (_) {}
-      });
-    });
-  }
-
-  loadWebhookConfig();
+  scheduleKeepaliveFromServer();
   connectSSE();
   fetchAll();
 })();
