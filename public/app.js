@@ -14,6 +14,25 @@
   const conn = $('#connectionStatus');
   const BASE = location.origin;
 
+  let livePollTimer = null;
+
+  function startLivePoll(ms) {
+    if (livePollTimer) return;
+    livePollTimer = setInterval(() => { fetchAll(); stats(); }, ms);
+  }
+
+  function stopLivePoll() {
+    if (livePollTimer) {
+      clearInterval(livePollTimer);
+      livePollTimer = null;
+    }
+  }
+
+  function setConnStatus(text, state) {
+    conn.className = 'connection-status ' + (state || '');
+    conn.querySelector('.status-text').textContent = text;
+  }
+
   function setDefaultDates(days) {
     if (days === 0) {
       dateFrom = ''; dateTo = '';
@@ -36,16 +55,33 @@
   }
 
   function connectSSE() {
-    if (es) es.close();
+    if (es) {
+      es.close();
+      es = null;
+    }
     es = new EventSource('/api/alerts/stream');
+
+    const openTimer = setTimeout(() => {
+      if (es && es.readyState !== EventSource.OPEN) {
+        setConnStatus('Live (polling)', 'connected');
+        startLivePoll(15000);
+      }
+    }, 4000);
+
     es.onopen = () => {
-      conn.className = 'connection-status connected';
-      conn.querySelector('.status-text').textContent = 'Connected';
+      clearTimeout(openTimer);
+      stopLivePoll();
+      setConnStatus('Connected', 'connected');
     };
     es.onmessage = e => {
       try {
         const d = JSON.parse(e.data);
-        if (d.type === 'connected') { fetchAll(); return; }
+        if (d.type === 'connected') { fetchAll(); stats(); return; }
+        if (d.type === 'error') {
+          setConnStatus('Live (polling)', 'connected');
+          startLivePoll(15000);
+          return;
+        }
         if (d.type === 'cleared') { alerts.length = 0; render(); stats(); return; }
         if (d.type === 'refresh') { fetchAll(); stats(); return; }
         d._new = true;
@@ -54,8 +90,13 @@
       } catch (_) {}
     };
     es.onerror = () => {
-      conn.className = 'connection-status error';
-      conn.querySelector('.status-text').textContent = 'Disconnected';
+      clearTimeout(openTimer);
+      setConnStatus('Reconnecting…', 'error');
+      startLivePoll(15000);
+      try {
+        es.close();
+      } catch (_) {}
+      es = null;
       setTimeout(connectSSE, 3000);
     };
   }
@@ -63,7 +104,7 @@
   async function fetchAll() {
     try {
       const dp = dateParams();
-      const r = await fetch(`/api/alerts?limit=500${dp ? '&' + dp : ''}`);
+      const r = await fetch(`/api/alerts?limit=2000${dp ? '&' + dp : ''}`);
       const d = await r.json();
       alerts.length = 0;
       d.alerts.forEach(a => alerts.push(a));
@@ -285,7 +326,7 @@
     fetchAll();
   });
 
-  setDefaultDates(30);
+  setDefaultDates(7);
 
   let keepalivePollTimer = null;
 

@@ -107,7 +107,7 @@ function createSqliteStore(retentionDays) {
         received_at: alert.received_at
       });
     },
-    async fetch({ state, severity, entity_type, from, to, limit = 500 } = {}) {
+    async fetch({ state, severity, entity_type, from, to, limit = 2000 } = {}) {
       const defaultCutoff = new Date(Date.now() - retentionDays * 86400000).toISOString();
       const fromDate = from || defaultCutoff;
       let sql = 'SELECT * FROM alerts WHERE received_at >= @fromDate';
@@ -216,7 +216,7 @@ function createPgStore(pool, retentionDays) {
       ];
       await pool.query(upsertSql, vals);
     },
-    async fetch({ state, severity, entity_type, from, to, limit = 500 } = {}) {
+    async fetch({ state, severity, entity_type, from, to, limit = 2000 } = {}) {
       const defaultCutoff = new Date(Date.now() - retentionDays * 86400000).toISOString();
       const fromDate = from || defaultCutoff;
       const params = [fromDate];

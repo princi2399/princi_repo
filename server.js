@@ -167,19 +167,47 @@ async function bootstrap() {
     console.log(`[ALERT] ${alert.severity} | ${alert.entity_name} (${alert.entity_type}) | score: ${alert.criticality_score} | state: ${alert.current_state} | src: ${alert.source}`);
   }
 
-  app.get('/api/alerts/stream', async (req, res) => {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
+  app.get('/api/alerts/stream', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
-    res.flushHeaders();
+    if (typeof res.flushHeaders === 'function') res.flushHeaders();
+    res.write(': stream\n\n');
 
-    const total = await store.count();
-    res.write(`data: ${JSON.stringify({ type: 'connected', count: total })}\n\n`);
+    let keepAlive = null;
+    let closed = false;
+    const cleanup = () => {
+      if (closed) return;
+      closed = true;
+      if (keepAlive) clearInterval(keepAlive);
+      sseClients.delete(res);
+    };
+    req.on('close', cleanup);
+    req.on('aborted', cleanup);
 
-    sseClients.add(res);
-    const keepAlive = setInterval(() => res.write(': keep-alive\n\n'), 30000);
-    req.on('close', () => { clearInterval(keepAlive); sseClients.delete(res); });
+    (async () => {
+      try {
+        const total = await store.count();
+        if (closed) return;
+        res.write(`data: ${JSON.stringify({ type: 'connected', count: total })}\n\n`);
+        sseClients.add(res);
+        keepAlive = setInterval(() => {
+          try {
+            res.write(': keep-alive\n\n');
+          } catch (_) {
+            cleanup();
+          }
+        }, 25000);
+      } catch (e) {
+        try {
+          res.write(`data: ${JSON.stringify({ type: 'error', message: String(e.message) })}\n\n`);
+        } catch (_) {}
+        try {
+          res.end();
+        } catch (_) {}
+      }
+    })();
   });
 
   function handleWebhook(source) {
@@ -228,7 +256,7 @@ async function bootstrap() {
 
   app.get('/api/alerts', async (req, res) => {
     try {
-      const { state, severity, entity_type, from, to, limit = 500 } = req.query;
+      const { state, severity, entity_type, from, to, limit = 2000 } = req.query;
       const alerts = await store.fetch({ state, severity, entity_type, from, to, limit });
       res.json({ total: alerts.length, alerts });
     } catch (err) {
