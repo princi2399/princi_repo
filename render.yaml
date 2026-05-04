@@ -1,11 +1,16 @@
-# Web service only. For alert persistence on Render: create a Render Postgres (or any Postgres),
-# then add env var DATABASE_URL (Internal Database URL) on this service. Free web dynos use an
-# ephemeral disk, so SQLite alone is cleared on restart unless DATABASE_URL is set.
+# Blueprint: link a Render Postgres so alerts survive web dyno restarts (free web = ephemeral disk).
+# After sync, set your web service root to this folder if the repo root is not overwatch-alerts.
+databases:
+  - name: overwatch-alerts-pg
+    databaseName: overwatch_alerts
+    user: overwatch_app
+
 services:
   - type: web
     name: overwatch-alerts
     runtime: node
     plan: free
+    rootDir: overwatch-alerts
     buildCommand: npm install
     startCommand: node server.js
     envVars:
@@ -13,5 +18,11 @@ services:
         value: 10000
       - key: NODE_ENV
         value: production
+      - key: RETENTION_DAYS
+        value: "30"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: overwatch-alerts-pg
+          property: connectionString
     healthCheckPath: /api/health
     autoDeploy: true

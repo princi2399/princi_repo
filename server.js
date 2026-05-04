@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const dbStore = require('./db-store');
+const { createAlertStore } = require('./alert-store');
 
 const app = express();
 app.use(cors({ origin: '*' }));
@@ -12,13 +12,9 @@ app.use(express.text({ type: 'text/*', limit: '5mb' }));
 app.use(express.raw({ type: 'application/octet-stream', limit: '5mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-const RETENTION_DAYS = 30;
+const RETENTION_DAYS = parseInt(process.env.RETENTION_DAYS || '30', 10);
+const PORT = process.env.PORT || 3000;
 
-function retentionCutoffIso() {
-  return new Date(Date.now() - RETENTION_DAYS * 86400000).toISOString();
-}
-
-// ── SSE ──
 const sseClients = new Set();
 
 function broadcastAlert(alert) {
@@ -28,7 +24,6 @@ function broadcastAlert(alert) {
   }
 }
 
-// ── Payload extraction ──
 function classifySeverity(score) {
   if (score >= 61) return 'HIGH';
   if (score >= 31) return 'MEDIUM';
@@ -126,139 +121,132 @@ function processAlert(payload, source = 'webhook') {
   };
 }
 
-async function storeAndBroadcast(alert) {
-  await dbStore.insertAlert(alert);
-  broadcastAlert(alert);
-  console.log(`[ALERT] ${alert.severity} | ${alert.entity_name} (${alert.entity_type}) | score: ${alert.criticality_score} | state: ${alert.current_state} | src: ${alert.source}`);
-}
+async function bootstrap() {
+  const store = await createAlertStore(RETENTION_DAYS);
 
-// ── SSE endpoint ──
-app.get('/api/alerts/stream', async (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders();
+  async function persistAndBroadcast(alert) {
+    await store.insert(alert);
+    broadcastAlert(alert);
+    console.log(`[ALERT] ${alert.severity} | ${alert.entity_name} (${alert.entity_type}) | score: ${alert.criticality_score} | state: ${alert.current_state} | src: ${alert.source}`);
+  }
 
-  try {
-    const total = await dbStore.countAlerts();
+  app.get('/api/alerts/stream', async (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    const total = await store.count();
     res.write(`data: ${JSON.stringify({ type: 'connected', count: total })}\n\n`);
-  } catch (e) {
-    res.write(`data: ${JSON.stringify({ type: 'connected', count: 0, error: String(e.message) })}\n\n`);
+
+    sseClients.add(res);
+    const keepAlive = setInterval(() => res.write(': keep-alive\n\n'), 30000);
+    req.on('close', () => { clearInterval(keepAlive); sseClients.delete(res); });
+  });
+
+  function handleWebhook(source) {
+    return async (req, res) => {
+      let body = req.body;
+      if (typeof body === 'string') body = tryParseJSON(body) || body;
+      if (Buffer.isBuffer(body)) body = tryParseJSON(body.toString()) || body;
+
+      const payload = extractOverwatchPayload(body);
+      if (!payload || typeof payload !== 'object') {
+        console.log(`[WARN] Invalid payload from ${source}:`, typeof body);
+        return res.status(200).json({ status: 'received_raw', warning: 'Could not extract alert structure', source });
+      }
+
+      const alert = processAlert(payload, source);
+      try {
+        await persistAndBroadcast(alert);
+        res.status(200).json({ status: 'received', alert_id: alert.alert_id, source });
+      } catch (err) {
+        console.error('[ERR] store.insert', err);
+        res.status(500).json({ status: 'error', message: err.message });
+      }
+    };
   }
 
-  sseClients.add(res);
-  const keepAlive = setInterval(() => res.write(': keep-alive\n\n'), 30000);
-  req.on('close', () => { clearInterval(keepAlive); sseClients.delete(res); });
-});
+  app.post('/webhook/overwatch', handleWebhook('overwatch'));
+  app.post('/webhook/pipedream', handleWebhook('pipedream'));
+  app.post('/webhook/:source', handleWebhook('dynamic'));
+  app.put('/webhook/:source?', handleWebhook('put'));
+  app.patch('/webhook/:source?', handleWebhook('patch'));
 
-// ── Webhook handlers ──
-function handleWebhook(source) {
-  return async (req, res) => {
-    let body = req.body;
-    if (typeof body === 'string') body = tryParseJSON(body) || body;
-    if (Buffer.isBuffer(body)) body = tryParseJSON(body.toString()) || body;
-
-    const payload = extractOverwatchPayload(body);
-    if (!payload || typeof payload !== 'object') {
-      console.log(`[WARN] Invalid payload from ${source}:`, typeof body);
-      return res.status(200).json({ status: 'received_raw', warning: 'Could not extract alert structure', source });
-    }
-
-    const alert = processAlert(payload, source);
+  app.get('/api/alerts', async (req, res) => {
     try {
-      await storeAndBroadcast(alert);
-      res.status(200).json({ status: 'received', alert_id: alert.alert_id, source });
+      const { state, severity, entity_type, from, to, limit = 500 } = req.query;
+      const alerts = await store.fetch({ state, severity, entity_type, from, to, limit });
+      res.json({ total: alerts.length, alerts });
     } catch (err) {
-      console.error('[ERR] store alert:', err);
-      res.status(500).json({ status: 'error', message: 'Failed to persist alert' });
+      res.status(500).json({ error: err.message });
     }
-  };
-}
+  });
 
-app.post('/webhook/overwatch', handleWebhook('overwatch'));
-app.post('/webhook/pipedream', handleWebhook('pipedream'));
-app.post('/webhook/:source', handleWebhook('dynamic'));
-app.put('/webhook/:source?', handleWebhook('put'));
-app.patch('/webhook/:source?', handleWebhook('patch'));
-
-// ── REST API ──
-app.get('/api/alerts', async (req, res) => {
-  try {
-    const { state, severity, entity_type, from, to, limit = 500 } = req.query;
-    const alerts = await dbStore.fetchAlerts({
-      state, severity, entity_type, from, to, limit,
-      retentionCutoff: retentionCutoffIso()
-    });
-    res.json({ total: alerts.length, alerts });
-  } catch (e) {
-    res.status(500).json({ error: String(e.message) });
-  }
-});
-
-app.get('/api/stats', async (req, res) => {
-  try {
-    const { from, to } = req.query;
-    const stats = await dbStore.fetchStats({ from, to, retentionCutoff: retentionCutoffIso() });
-    res.json({ ...stats, connected_clients: sseClients.size, storage: dbStore.getMode() });
-  } catch (e) {
-    res.status(500).json({ error: String(e.message) });
-  }
-});
-
-app.get('/api/health', async (_req, res) => {
-  try {
-    const alerts_count = await dbStore.countAlerts();
-    res.json({
-      status: 'ok',
-      storage: dbStore.getMode(),
-      retention_days: RETENTION_DAYS,
-      uptime: process.uptime(),
-      alerts_count,
-      connected_clients: sseClients.size,
-      memory: process.memoryUsage()
-    });
-  } catch (e) {
-    res.status(500).json({ status: 'error', message: e.message });
-  }
-});
-
-app.delete('/api/alerts', async (_req, res) => {
-  try {
-    await dbStore.deleteAllAlerts();
-    for (const client of sseClients) {
-      try { client.write(`data: ${JSON.stringify({ type: 'cleared' })}\n\n`); } catch (_) {}
+  app.get('/api/stats', async (req, res) => {
+    try {
+      const { from, to } = req.query;
+      const stats = await store.stats({ from, to });
+      res.json({ ...stats, connected_clients: sseClients.size });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
     }
-    res.json({ status: 'cleared' });
-  } catch (e) {
-    res.status(500).json({ error: String(e.message) });
+  });
+
+  app.get('/api/health', async (_req, res) => {
+    try {
+      const alerts_count = await store.count();
+      res.json({
+        status: 'ok',
+        uptime: process.uptime(),
+        alerts_count,
+        connected_clients: sseClients.size,
+        memory: process.memoryUsage(),
+        database: store.kind,
+        retention_days: RETENTION_DAYS
+      });
+    } catch (err) {
+      res.status(500).json({ status: 'error', message: err.message });
+    }
+  });
+
+  app.delete('/api/alerts', async (_req, res) => {
+    try {
+      await store.deleteAll();
+      for (const client of sseClients) {
+        try { client.write(`data: ${JSON.stringify({ type: 'cleared' })}\n\n`); } catch (_) {}
+      }
+      res.json({ status: 'cleared' });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  async function purgeOld() {
+    try {
+      const n = await store.purge();
+      if (n > 0) console.log(`[PURGE] Removed ${n} alerts older than ${RETENTION_DAYS} days`);
+    } catch (e) {
+      console.error('[PURGE]', e.message);
+    }
   }
-});
+  setInterval(purgeOld, 3600000);
+  await purgeOld();
 
-async function purgeOld() {
-  const cutoff = retentionCutoffIso();
-  const changes = await dbStore.purgeBefore(cutoff);
-  if (changes > 0) console.log(`[PURGE] Removed ${changes} alerts older than ${RETENTION_DAYS} days`);
-}
-
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-const PORT = process.env.PORT || 3000;
-
-(async function start() {
-  await dbStore.init();
-  setInterval(() => { purgeOld().catch(e => console.error('[PURGE]', e)); }, 3600000);
-  purgeOld().catch(e => console.error('[PURGE]', e));
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  });
 
   app.listen(PORT, '0.0.0.0', async () => {
-    const count = await dbStore.countAlerts().catch(() => 0);
-    console.log(`\n  PayU Overwatch Alerts on port ${PORT} | ${count} alerts in DB | retention ${RETENTION_DAYS}d | storage: ${dbStore.getMode()}`);
+    const count = await store.count();
+    console.log(`\n  PayU Overwatch Alerts on port ${PORT} | ${count} alerts | DB: ${store.kind} | retention ${RETENTION_DAYS}d`);
     console.log(`  POST /webhook/overwatch | POST /webhook/pipedream | POST /webhook/:any`);
     console.log(`  GET  /api/alerts | /api/alerts/stream | /api/stats | /api/health\n`);
   });
-})().catch(err => {
-  console.error('Failed to start:', err);
+}
+
+bootstrap().catch((err) => {
+  console.error('[FATAL]', err);
   process.exit(1);
 });
