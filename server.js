@@ -134,8 +134,11 @@ function extractOverwatchPayload(raw) {
 
 function processAlert(payload, source = 'webhook') {
   const score = payload.criticality_score ?? 0;
+  const received = payload.received_at && !Number.isNaN(Date.parse(payload.received_at))
+    ? new Date(payload.received_at).toISOString()
+    : new Date().toISOString();
   return {
-    received_at: new Date().toISOString(),
+    received_at: received,
     alert_id: payload.alert_id || `auto-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     alert_group_id: payload.alert_group_id || null,
     notification_id: payload.notification_id || null,
