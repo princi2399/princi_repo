@@ -11,12 +11,29 @@ const TARGETS = (process.env.TARGETS || 'http://localhost:3001')
 const PER_DAY = parseInt(process.env.PER_DAY || '5', 10);
 const DAYS_BACK = parseInt(process.env.DAYS_BACK || '7', 10);
 
-const merchants = [
-  ['mer_swiggy', 'Swiggy'], ['mer_zomato', 'Zomato'],
-  ['mer_meesho', 'Meesho'], ['mer_flipkart', 'Flipkart'],
-  ['mer_myntra', 'Myntra'], ['mer_indigo', 'IndiGo'],
-  ['mer_snapdeal', 'Snapdeal'], ['mer_bbb', 'BigBasket']
-];
+const ENTITIES = {
+  merchant: [
+    ['mer_swiggy', 'Swiggy'], ['mer_zomato', 'Zomato'],
+    ['mer_meesho', 'Meesho'], ['mer_flipkart', 'Flipkart'],
+    ['mer_myntra', 'Myntra'], ['mer_indigo', 'IndiGo'],
+    ['mer_snapdeal', 'Snapdeal'], ['mer_bbb', 'BigBasket']
+  ],
+  acquirer: [
+    ['acq_hdfc', 'HDFC Acquirer'], ['acq_icici', 'ICICI Acquirer'],
+    ['acq_axis', 'Axis Acquirer'], ['acq_sbi', 'SBI Acquirer'],
+    ['acq_yes', 'Yes Bank Acquirer']
+  ],
+  issuer: [
+    ['iss_hdfc', 'HDFC Issuer'], ['iss_icici', 'ICICI Issuer'],
+    ['iss_kotak', 'Kotak Issuer'], ['iss_pnb', 'PNB Issuer'],
+    ['iss_indusind', 'IndusInd Issuer']
+  ],
+  scheme: [
+    ['sch_visa', 'VISA'], ['sch_mc', 'Mastercard'],
+    ['sch_rupay', 'RuPay'], ['sch_amex', 'Amex'], ['sch_diners', 'Diners']
+  ]
+};
+const ENTITY_TYPES = Object.keys(ENTITIES);
 const products = ['PayuBizTransactionEngine', 'PayuMoney', 'PayuCheckout'];
 const metrics = ['success_rate', 'failure_rate', 'srt_drop', 'latency'];
 
@@ -28,8 +45,9 @@ function uuid() {
   });
 }
 
-function buildAlert(daysAgo) {
-  const [id, baseName] = pick(merchants);
+function buildAlert(daysAgo, forcedType) {
+  const entityType = forcedType || pick(ENTITY_TYPES);
+  const [id, baseName] = pick(ENTITIES[entityType]);
   const score = 5 + Math.floor(Math.random() * 95);
   const dayStart = new Date();
   dayStart.setDate(dayStart.getDate() - daysAgo);
@@ -52,9 +70,9 @@ function buildAlert(daysAgo) {
     product: pick(products),
     metric: pick(metrics),
     entity_identifier: id,
-    entity_type: 'merchant_id',
+    entity_type: entityType,
     entity_name: `[TEST] ${baseName}`,
-    merchant_name: `[TEST] ${baseName}`,
+    merchant_name: entityType === 'merchant' ? `[TEST] ${baseName}` : undefined,
     started_at: startedAt.toISOString(),
     ended_at: endedAt,
     current_state: isResolved ? 'recovered' : 'ongoing',
@@ -87,8 +105,12 @@ async function postAll(alert) {
 async function main() {
   console.log(`Filling days 1..${DAYS_BACK - 1} ago with ${PER_DAY} alerts each → ${TARGETS.join(', ')}`);
   const all = [];
-  for (let d = 1; d < DAYS_BACK; d++) {
-    for (let i = 0; i < PER_DAY; i++) all.push(buildAlert(d));
+  for (let d = 0; d < DAYS_BACK; d++) {
+    for (let i = 0; i < PER_DAY; i++) {
+      // round-robin across entity types so each filter has data on each day
+      const t = ENTITY_TYPES[i % ENTITY_TYPES.length];
+      all.push(buildAlert(d, t));
+    }
   }
   // post oldest first so insertion id ordering matches event-time DESC on old-code servers
   all.sort((a, b) => new Date(a.received_at) - new Date(b.received_at));

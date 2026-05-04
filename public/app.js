@@ -311,7 +311,16 @@
   // Helpers
   function esc(s) { const d = document.createElement('div'); d.textContent = String(s ?? ''); return d.innerHTML; }
   function fmtN(n) { return Number(n).toLocaleString(); }
-  function fmtD(m) { return m < 60 ? `${m}m` : `${Math.floor(m/60)}h ${m%60}m`; }
+  function fmtD(m) {
+    const n = Number(m);
+    if (!Number.isFinite(n) || n < 0) return '0m';
+    const totalMin = Math.round(n);
+    if (totalMin < 1) return '<1m';
+    if (totalMin < 60) return `${totalMin}m`;
+    const h = Math.floor(totalMin / 60);
+    const rem = totalMin % 60;
+    return rem ? `${h}h ${rem}m` : `${h}h`;
+  }
   function fmtT(iso) {
     if (!iso) return 'N/A';
     try { return new Date(iso).toLocaleString('en-US', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }); }
