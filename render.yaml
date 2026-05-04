@@ -1,5 +1,7 @@
-# Blueprint: link a Render Postgres so alerts survive web dyno restarts (free web = ephemeral disk).
-# After sync, set your web service root to this folder if the repo root is not overwatch-alerts.
+# Default: Postgres for persistence on Render (free web disk is ephemeral).
+# To use SQLite instead on Render, you need a paid plan with a persistent disk:
+#   1) Set USE_SQLITE=true (forces SQLite even if DATABASE_URL is present)
+#   2) Mount a disk and point SQLITE_PATH at it (uncomment "disk" block below)
 databases:
   - name: overwatch-alerts-pg
     databaseName: overwatch_alerts
@@ -26,5 +28,14 @@ services:
         fromDatabase:
           name: overwatch-alerts-pg
           property: connectionString
+      # SQLite fallback / override (paid plan only — needs disk below):
+      # - key: USE_SQLITE
+      #   value: "true"
+      # - key: SQLITE_PATH
+      #   value: /var/data/alerts.db
+    # disk:                               # uncomment on paid plans for SQLite persistence
+    #   name: overwatch-data
+    #   mountPath: /var/data
+    #   sizeGB: 1
     healthCheckPath: /api/health
     autoDeploy: true

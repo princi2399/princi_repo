@@ -36,11 +36,15 @@ function mapRow(row) {
 }
 
 function createSqliteStore(retentionDays) {
-  const DB_PATH = path.join(__dirname, 'data', 'alerts.db');
+  const envPath = (process.env.SQLITE_PATH || '').trim();
+  const DB_PATH = envPath
+    ? (path.isAbsolute(envPath) ? envPath : path.join(__dirname, envPath))
+    : path.join(__dirname, 'data', 'alerts.db');
   fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
   const db = new Database(DB_PATH);
   db.pragma('journal_mode = WAL');
   db.pragma('busy_timeout = 5000');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_alerts_received_at ON alerts (received_at DESC)');
   db.exec(`
     CREATE TABLE IF NOT EXISTS alerts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -83,6 +87,7 @@ function createSqliteStore(retentionDays) {
   return {
     kind: 'sqlite',
     retentionDays,
+    location: DB_PATH,
     async insert(alert) {
       insertStmt.run({
         alert_id: alert.alert_id,
@@ -300,7 +305,8 @@ async function initPgSchema(pool) {
 }
 
 async function createAlertStore(retentionDays) {
-  const url = process.env.DATABASE_URL;
+  const forceSqlite = /^(1|true|yes)$/i.test(process.env.USE_SQLITE || '');
+  const url = forceSqlite ? '' : process.env.DATABASE_URL;
   if (url) {
     const { Pool } = require('pg');
     let useSsl = false;
@@ -319,8 +325,9 @@ async function createAlertStore(retentionDays) {
     console.log('[DB] Using PostgreSQL (DATABASE_URL) — alerts survive deploys/restarts.');
     return createPgStore(pool, retentionDays);
   }
-  console.log('[DB] Using SQLite (./data/alerts.db). Set DATABASE_URL on Render for persistence.');
-  return createSqliteStore(retentionDays);
+  const sqliteStore = createSqliteStore(retentionDays);
+  console.log(`[DB] Using SQLite at ${sqliteStore.location} | retention ${retentionDays}d${forceSqlite ? ' (USE_SQLITE=1)' : ''}`);
+  return sqliteStore;
 }
 
 module.exports = { createAlertStore };

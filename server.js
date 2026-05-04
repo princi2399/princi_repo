@@ -288,6 +288,7 @@ async function bootstrap() {
         connected_clients: sseClients.size,
         memory: process.memoryUsage(),
         database: store.kind,
+        database_location: store.location || null,
         retention_days: RETENTION_DAYS
       });
     } catch (err) {
