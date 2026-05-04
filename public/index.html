@@ -59,7 +59,7 @@
           <button type="button" class="integ-copy" data-target="webhookUrlOverwatch">Copy</button>
         </div>
         <p class="integ-hint">In Pipedream add <strong>HTTP Request</strong>: method <strong>POST</strong>, URL from above, body <code>{{steps.trigger.event}}</code> or, if the alert JSON is only inside the request body, <code>{{steps.trigger.event.body}}</code>. Content-Type <code>application/json</code>.</p>
-        <p class="integ-hint integ-hint-sub">Browser live stream: <code id="sseUrl">…</code> (this page connects automatically).</p>
+        <p class="integ-hint integ-hint-sub">Browser live stream: <code id="sseUrl">…</code> (connected automatically). Refetch every <span id="refreshMins">15</span> min. On Render free tier, set env <code>PUBLIC_BASE_URL</code> to this site’s URL so the server can self-call <code>/api/health</code> on the same interval and reduce sleep.</p>
       </div>
       <div class="date-range">
         <label>From</label>

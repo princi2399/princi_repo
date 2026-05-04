@@ -47,6 +47,7 @@
         const d = JSON.parse(e.data);
         if (d.type === 'connected') { fetchAll(); return; }
         if (d.type === 'cleared') { alerts.length = 0; render(); stats(); return; }
+        if (d.type === 'refresh') { fetchAll(); stats(); return; }
         d._new = true;
         alerts.unshift(d);
         render(); stats();
@@ -286,6 +287,8 @@
 
   setDefaultDates(30);
 
+  let keepalivePollTimer = null;
+
   async function loadWebhookConfig() {
     const panel = $('#webhookInteg');
     if (!panel) return;
@@ -296,6 +299,12 @@
       $('#webhookUrlOverwatch').textContent = c.webhook_overwatch;
       const sseEl = $('#sseUrl');
       if (sseEl) sseEl.textContent = c.alerts_stream_sse;
+
+      const interval = Number(c.refresh_interval_ms) > 0 ? Number(c.refresh_interval_ms) : 15 * 60 * 1000;
+      const rm = $('#refreshMins');
+      if (rm && c.refresh_interval_minutes != null) rm.textContent = String(c.refresh_interval_minutes);
+      if (keepalivePollTimer) clearInterval(keepalivePollTimer);
+      keepalivePollTimer = setInterval(() => { fetchAll(); stats(); }, interval);
     } catch (_) {}
   }
 

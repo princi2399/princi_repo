@@ -13,12 +13,22 @@ app.use(express.raw({ type: 'application/octet-stream', limit: '5mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const RETENTION_DAYS = parseInt(process.env.RETENTION_DAYS || '30', 10);
+const KEEPALIVE_MINUTES = parseInt(process.env.KEEPALIVE_MINUTES || '15', 10);
+const KEEPALIVE_MS = Math.max(1, KEEPALIVE_MINUTES) * 60 * 1000;
 const PORT = process.env.PORT || 3000;
 
 const sseClients = new Set();
 
 function broadcastAlert(alert) {
   const data = JSON.stringify(alert);
+  for (const client of sseClients) {
+    try { client.write(`data: ${data}\n\n`); } catch (_) {}
+  }
+}
+
+/** Tells open dashboards to refetch; also used with optional self-wake for hosting idle timers. */
+function broadcastSseJson(obj) {
+  const data = JSON.stringify(obj);
   for (const client of sseClients) {
     try { client.write(`data: ${data}\n\n`); } catch (_) {}
   }
@@ -190,7 +200,12 @@ async function bootstrap() {
       public_base: base,
       webhook_overwatch: `${base}/webhook/overwatch`,
       webhook_pipedream: `${base}/webhook/pipedream`,
-      alerts_stream_sse: `${base}/api/alerts/stream`
+      alerts_stream_sse: `${base}/api/alerts/stream`,
+      refresh_interval_ms: KEEPALIVE_MS,
+      refresh_interval_minutes: KEEPALIVE_MINUTES,
+      self_wake_enabled: Boolean(
+        (process.env.PUBLIC_BASE_URL || '').trim() && process.env.DISABLE_SELF_WAKE !== '1'
+      )
     });
   });
 
@@ -254,6 +269,31 @@ async function bootstrap() {
   setInterval(purgeOld, 3600000);
   await purgeOld();
 
+  async function selfWakePing() {
+    const base = (process.env.PUBLIC_BASE_URL || '').trim().replace(/\/$/, '');
+    if (!base || process.env.DISABLE_SELF_WAKE === '1') return;
+    try {
+      const u = new URL('/api/health', `${base}/`);
+      const r = await fetch(u, { headers: { 'user-agent': 'overwatch-alerts-self-wake' } });
+      if (!r.ok) console.warn('[SELF-WAKE] HTTP', r.status);
+    } catch (e) {
+      console.warn('[SELF-WAKE]', e.message);
+    }
+  }
+
+  setInterval(async () => {
+    broadcastSseJson({
+      type: 'refresh',
+      reason: 'keepalive',
+      at: new Date().toISOString()
+    });
+    if (sseClients.size) {
+      console.log(`[KEEPALIVE] SSE refresh → ${sseClients.size} client(s)`);
+    }
+    await selfWakePing();
+  }, KEEPALIVE_MS);
+  setTimeout(() => { selfWakePing(); }, 60000);
+
   app.get('*', (_req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
   });
@@ -262,7 +302,13 @@ async function bootstrap() {
     const count = await store.count();
     console.log(`\n  PayU Overwatch Alerts on port ${PORT} | ${count} alerts | DB: ${store.kind} | retention ${RETENTION_DAYS}d`);
     console.log(`  POST /webhook/overwatch | POST /webhook/pipedream | POST /webhook/:any`);
-    console.log(`  GET  /api/config | /api/alerts | /api/alerts/stream | /api/stats | /api/health\n`);
+    console.log(`  GET  /api/config | /api/alerts | /api/alerts/stream | /api/stats | /api/health`);
+    console.log(`  Keepalive: every ${KEEPALIVE_MINUTES}m → SSE refresh + optional self-wake (set PUBLIC_BASE_URL on Render)`);
+    if (process.env.RENDER === 'true' && !(process.env.PUBLIC_BASE_URL || '').trim()) {
+      console.log(`  [TIP] Set PUBLIC_BASE_URL=https://<your-app>.onrender.com so the service can self-ping /api/health and reduce free-tier sleep.\n`);
+    } else {
+      console.log('');
+    }
   });
 }
 
