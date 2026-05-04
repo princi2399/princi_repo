@@ -154,7 +154,11 @@ function processAlert(payload, source = 'webhook') {
   const score = payload.criticality_score ?? 0;
   const received = payload.received_at && !Number.isNaN(Date.parse(payload.received_at))
     ? new Date(payload.received_at).toISOString()
-    : new Date().toISOString();
+    : payload.notification_triggered_at && !Number.isNaN(Date.parse(payload.notification_triggered_at))
+      ? new Date(payload.notification_triggered_at).toISOString()
+      : payload.started_at && !Number.isNaN(Date.parse(payload.started_at))
+        ? new Date(payload.started_at).toISOString()
+        : new Date().toISOString();
   return {
     received_at: received,
     alert_id: payload.alert_id || `auto-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
