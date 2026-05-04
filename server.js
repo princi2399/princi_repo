@@ -132,6 +132,24 @@ function extractOverwatchPayload(raw) {
   return raw;
 }
 
+/** Map PayU V2 states (e.g. "recovered") and compound entity types to our canonical buckets. */
+function normalizeState(s) {
+  if (!s) return 'ongoing';
+  const v = String(s).toLowerCase();
+  if (['resolved', 'recovered', 'recovery', 'closed', 'cleared'].includes(v)) return 'resolved';
+  if (['ongoing', 'open', 'active', 'detected', 'firing'].includes(v)) return 'ongoing';
+  return v;
+}
+function normalizeEntityType(t) {
+  if (!t) return 'unknown';
+  const v = String(t).toLowerCase();
+  if (v.includes('merchant')) return 'merchant';
+  if (v.includes('acquirer') || v.includes('pg_') || v === 'pg') return 'acquirer';
+  if (v.includes('issuer') || v.includes('bank')) return 'issuer';
+  if (v.includes('scheme') || v.includes('network')) return 'card_scheme';
+  return v;
+}
+
 function processAlert(payload, source = 'webhook') {
   const score = payload.criticality_score ?? 0;
   const received = payload.received_at && !Number.isNaN(Date.parse(payload.received_at))
@@ -147,11 +165,11 @@ function processAlert(payload, source = 'webhook') {
     product: payload.product || 'Unknown',
     metric: payload.metric || 'unknown',
     entity_identifier: payload.entity_identifier || 'unknown',
-    entity_type: payload.entity_type || 'unknown',
-    entity_name: payload.entity_name || payload.entity_identifier || 'unknown',
+    entity_type: normalizeEntityType(payload.entity_type),
+    entity_name: payload.entity_name || payload.merchant_name || payload.entity_identifier || 'unknown',
     started_at: payload.started_at || null,
     ended_at: payload.ended_at || null,
-    current_state: payload.current_state || 'ongoing',
+    current_state: normalizeState(payload.current_state),
     criticality_score: score,
     severity: classifySeverity(score),
     stats: payload.stats || {},
