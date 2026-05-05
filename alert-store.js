@@ -158,6 +158,37 @@ function createSqliteStore(retentionDays) {
       const cutoff = new Date(Date.now() - retentionDays * 86400000).toISOString();
       const { changes } = db.prepare('DELETE FROM alerts WHERE received_at < ?').run(cutoff);
       return changes;
+    },
+    async tables() {
+      return db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all().map(r => r.name);
+    },
+    async schema(table = 'alerts') {
+      if (!/^[a-zA-Z_][\w]*$/.test(table)) throw new Error('Invalid table name');
+      return db.prepare(`PRAGMA table_info(${table})`).all().map(c => ({
+        name: c.name,
+        type: c.type,
+        nullable: c.notnull === 0,
+        default: c.dflt_value,
+        primary_key: c.pk === 1
+      }));
+    },
+    async rows({ table = 'alerts', limit = 50, offset = 0, orderBy = 'received_at', dir = 'DESC' } = {}) {
+      if (!/^[a-zA-Z_][\w]*$/.test(table)) throw new Error('Invalid table name');
+      if (!/^[a-zA-Z_][\w]*$/.test(orderBy)) orderBy = 'received_at';
+      const direction = String(dir).toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+      const lim = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 500);
+      const off = Math.max(parseInt(offset, 10) || 0, 0);
+      const total = db.prepare(`SELECT COUNT(*) as c FROM ${table}`).get().c;
+      const rows = db.prepare(`SELECT * FROM ${table} ORDER BY ${orderBy} ${direction} LIMIT ? OFFSET ?`).all(lim, off);
+      const cols = rows.length ? Object.keys(rows[0]) : (await this.schema(table)).map(c => c.name);
+      return { table, total, limit: lim, offset: off, orderBy, dir: direction, columns: cols, rows };
+    },
+    async query(sql) {
+      const t0 = Date.now();
+      const stmt = db.prepare(sql);
+      const rows = stmt.all();
+      const cols = rows.length ? Object.keys(rows[0]) : (stmt.columns ? stmt.columns().map(c => c.name) : []);
+      return { columns: cols, rows, rowCount: rows.length, executionMs: Date.now() - t0 };
     }
   };
 }
@@ -271,6 +302,44 @@ function createPgStore(pool, retentionDays) {
       const cutoff = new Date(Date.now() - retentionDays * 86400000).toISOString();
       const r = await pool.query('DELETE FROM alerts WHERE received_at < $1', [cutoff]);
       return r.rowCount ?? 0;
+    },
+    async tables() {
+      const r = await pool.query("SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename");
+      return r.rows.map(x => x.tablename);
+    },
+    async schema(table = 'alerts') {
+      if (!/^[a-zA-Z_][\w]*$/.test(table)) throw new Error('Invalid table name');
+      const r = await pool.query(`
+        SELECT column_name, data_type, is_nullable, column_default
+        FROM information_schema.columns
+        WHERE table_schema='public' AND table_name=$1
+        ORDER BY ordinal_position
+      `, [table]);
+      return r.rows.map(c => ({
+        name: c.column_name,
+        type: c.data_type,
+        nullable: c.is_nullable === 'YES',
+        default: c.column_default,
+        primary_key: false
+      }));
+    },
+    async rows({ table = 'alerts', limit = 50, offset = 0, orderBy = 'received_at', dir = 'DESC' } = {}) {
+      if (!/^[a-zA-Z_][\w]*$/.test(table)) throw new Error('Invalid table name');
+      if (!/^[a-zA-Z_][\w]*$/.test(orderBy)) orderBy = 'received_at';
+      const direction = String(dir).toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+      const lim = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 500);
+      const off = Math.max(parseInt(offset, 10) || 0, 0);
+      const totalR = await pool.query(`SELECT COUNT(*)::int AS c FROM ${table}`);
+      const total = totalR.rows[0].c;
+      const r = await pool.query(`SELECT * FROM ${table} ORDER BY ${orderBy} ${direction} LIMIT $1 OFFSET $2`, [lim, off]);
+      const cols = r.fields.map(f => f.name);
+      return { table, total, limit: lim, offset: off, orderBy, dir: direction, columns: cols, rows: r.rows };
+    },
+    async query(sql) {
+      const t0 = Date.now();
+      const r = await pool.query(sql);
+      const cols = r.fields.map(f => f.name);
+      return { columns: cols, rows: r.rows, rowCount: r.rowCount ?? r.rows.length, executionMs: Date.now() - t0 };
     }
   };
 }

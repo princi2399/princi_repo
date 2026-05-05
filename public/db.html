@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Database Browser · PayU Overwatch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/db.css" />
+</head>
+<body class="db-page">
+  <header class="db-header">
+    <div class="db-header-inner">
+      <a href="/" class="db-back">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Back to Dashboard
+      </a>
+      <div class="db-title">
+        <span class="db-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="5" rx="9" ry="3" stroke="currentColor" stroke-width="2"/><path d="M3 5v14a9 3 0 0018 0V5M3 12a9 3 0 0018 0" stroke="currentColor" stroke-width="2"/></svg>
+        </span>
+        Database Browser
+      </div>
+      <div class="db-meta" id="dbMeta">Loading…</div>
+    </div>
+  </header>
+
+  <main class="db-main">
+    <aside class="db-side">
+      <div class="db-side-section">
+        <div class="db-side-title">Tables</div>
+        <div id="tableList" class="db-table-list"></div>
+      </div>
+      <div class="db-side-section">
+        <div class="db-side-title">Schema · <span id="schemaTable">alerts</span></div>
+        <div id="schemaList" class="db-schema-list"></div>
+      </div>
+    </aside>
+
+    <section class="db-content">
+      <div class="db-tabs">
+        <button class="db-tab active" data-tab="rows">Rows</button>
+        <button class="db-tab" data-tab="query">SQL Query</button>
+      </div>
+
+      <div class="db-pane" id="paneRows">
+        <div class="db-toolbar">
+          <div class="db-tool-group">
+            <label>Order by</label>
+            <select id="orderBy"></select>
+            <select id="dir">
+              <option value="DESC">DESC</option>
+              <option value="ASC">ASC</option>
+            </select>
+          </div>
+          <div class="db-tool-group">
+            <label>Limit</label>
+            <select id="limit">
+              <option>25</option><option selected>50</option><option>100</option><option>200</option><option>500</option>
+            </select>
+          </div>
+          <div class="db-tool-spacer"></div>
+          <div class="db-pager">
+            <button id="prevBtn" class="db-btn">‹ Prev</button>
+            <span id="pageInfo" class="db-page-info">—</span>
+            <button id="nextBtn" class="db-btn">Next ›</button>
+          </div>
+        </div>
+        <div id="rowsWrap" class="db-rows-wrap"></div>
+      </div>
+
+      <div class="db-pane hidden" id="paneQuery">
+        <div class="db-query-help">
+          Read-only. Only single <code>SELECT</code> / <code>WITH</code> / <code>EXPLAIN</code> statements allowed. Auto-limited to 500 rows.
+        </div>
+        <textarea id="sqlBox" class="db-sql" spellcheck="false">SELECT entity_type, current_state, COUNT(*) AS n
+FROM alerts
+GROUP BY entity_type, current_state
+ORDER BY n DESC</textarea>
+        <div class="db-query-actions">
+          <button id="runBtn" class="db-btn primary">▶ Run</button>
+          <span id="queryStatus" class="db-query-status"></span>
+        </div>
+        <div id="queryWrap" class="db-rows-wrap"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/db.js"></script>
+</body>
+</html>

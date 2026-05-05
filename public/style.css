@@ -129,6 +129,14 @@ body {
 
 .btn-test:hover { background: var(--teal-light); }
 
+a.btn-test { text-decoration: none; }
+.btn-test.btn-db {
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.8);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.btn-test.btn-db:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
 /* ── Hero ── */
 .hero {
   background: linear-gradient(145deg, #0d3d38, #134e4a 40%, #115e56 70%, #0f766e);

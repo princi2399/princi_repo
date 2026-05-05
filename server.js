@@ -321,6 +321,73 @@ async function bootstrap() {
     }
   });
 
+  app.get('/api/db/info', async (_req, res) => {
+    try {
+      const tables = await store.tables();
+      res.json({
+        engine: store.kind,
+        location: store.location || (store.kind === 'postgres' ? 'remote (DATABASE_URL)' : null),
+        retention_days: RETENTION_DAYS,
+        total_alerts: await store.count(),
+        tables
+      });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/db/schema', async (req, res) => {
+    try {
+      const table = req.query.table || 'alerts';
+      res.json({ table, columns: await store.schema(table) });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/db/rows', async (req, res) => {
+    try {
+      const result = await store.rows({
+        table: req.query.table || 'alerts',
+        limit: req.query.limit,
+        offset: req.query.offset,
+        orderBy: req.query.order_by,
+        dir: req.query.dir
+      });
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  function isReadOnlySql(raw) {
+    if (!raw || typeof raw !== 'string') return false;
+    const stripped = raw
+      .replace(/--.*$/gm, '')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .trim()
+      .replace(/;+\s*$/, '');
+    if (!stripped) return false;
+    if (/;/.test(stripped)) return false;
+    if (!/^(select|with|pragma\s+table_info|explain)\b/i.test(stripped)) return false;
+    if (/\b(insert|update|delete|drop|alter|create|attach|detach|truncate|grant|revoke|vacuum|reindex|replace)\b/i.test(stripped)) return false;
+    return true;
+  }
+
+  app.post('/api/db/query', async (req, res) => {
+    try {
+      const sql = (req.body && req.body.sql) || '';
+      if (!isReadOnlySql(sql)) {
+        return res.status(400).json({ error: 'Only single read-only SELECT/WITH queries are allowed.' });
+      }
+      const limited = /\blimit\b/i.test(sql) ? sql : `${sql.replace(/;\s*$/, '')} LIMIT 500`;
+      const out = await store.query(limited);
+      res.json(out);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
   app.delete('/api/alerts', async (_req, res) => {
     try {
       await store.deleteAll();
