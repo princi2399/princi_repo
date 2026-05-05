@@ -150,29 +150,36 @@ function normalizeEntityType(t) {
   return 'merchant';
 }
 
+function safeIso(v, nowMs) {
+  if (!v) return null;
+  const t = Date.parse(v);
+  if (Number.isNaN(t)) return null;
+  return new Date(Math.min(t, nowMs)).toISOString();
+}
+
 function processAlert(payload, source = 'webhook') {
+  const nowMs = Date.now();
+  const nowIso = new Date(nowMs).toISOString();
   const score = payload.criticality_score ?? 0;
-  const received = payload.received_at && !Number.isNaN(Date.parse(payload.received_at))
-    ? new Date(payload.received_at).toISOString()
-    : payload.notification_triggered_at && !Number.isNaN(Date.parse(payload.notification_triggered_at))
-      ? new Date(payload.notification_triggered_at).toISOString()
-      : payload.started_at && !Number.isNaN(Date.parse(payload.started_at))
-        ? new Date(payload.started_at).toISOString()
-        : new Date().toISOString();
+  const received =
+    safeIso(payload.received_at, nowMs) ||
+    safeIso(payload.notification_triggered_at, nowMs) ||
+    safeIso(payload.started_at, nowMs) ||
+    nowIso;
   return {
     received_at: received,
-    alert_id: payload.alert_id || `auto-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    alert_id: payload.alert_id || `auto-${nowMs}-${Math.random().toString(36).slice(2, 8)}`,
     alert_group_id: payload.alert_group_id || null,
     notification_id: payload.notification_id || null,
-    notification_triggered_at: payload.notification_triggered_at || new Date().toISOString(),
+    notification_triggered_at: safeIso(payload.notification_triggered_at, nowMs) || nowIso,
     notification_type: payload.notification_type || 'detection',
     product: payload.product || 'Unknown',
     metric: payload.metric || 'unknown',
     entity_identifier: payload.entity_identifier || 'unknown',
     entity_type: normalizeEntityType(payload.entity_type),
     entity_name: payload.entity_name || payload.merchant_name || payload.entity_identifier || 'unknown',
-    started_at: payload.started_at || null,
-    ended_at: payload.ended_at || null,
+    started_at: safeIso(payload.started_at, nowMs),
+    ended_at: safeIso(payload.ended_at, nowMs),
     current_state: normalizeState(payload.current_state),
     criticality_score: score,
     severity: classifySeverity(score),
