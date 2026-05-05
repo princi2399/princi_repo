@@ -436,6 +436,10 @@ async function bootstrap() {
   }, KEEPALIVE_MS);
   setTimeout(() => { selfWakePing(); }, 60000);
 
+  app.get('/db', (_req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'db.html'));
+  });
+
   app.get('*', (_req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
   });
