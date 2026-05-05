@@ -44,7 +44,6 @@ function createSqliteStore(retentionDays) {
   const db = new Database(DB_PATH);
   db.pragma('journal_mode = WAL');
   db.pragma('busy_timeout = 5000');
-  db.exec('CREATE INDEX IF NOT EXISTS idx_alerts_received_at ON alerts (received_at DESC)');
   db.exec(`
     CREATE TABLE IF NOT EXISTS alerts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,6 +69,7 @@ function createSqliteStore(retentionDays) {
       received_at TEXT NOT NULL
     )
   `);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_alerts_received_at ON alerts (received_at DESC)');
 
   const insertStmt = db.prepare(`
     INSERT OR REPLACE INTO alerts
