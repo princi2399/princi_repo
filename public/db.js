@@ -21,9 +21,24 @@
     return d.innerHTML;
   }
 
+  const TZ = 'Asia/Kolkata';
+  function fmtIst(v) {
+    try {
+      return new Date(v).toLocaleString('en-GB', {
+        timeZone: TZ,
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+      }) + ' IST';
+    } catch { return v; }
+  }
+
   function formatCellValue(v, colName) {
     if (v === null || v === undefined) {
       return { html: 'NULL', cls: 'null-cell' };
+    }
+    // ISO timestamps in *_at columns -> render in IST
+    if (typeof v === 'string' && /_at$/i.test(colName) && /^\d{4}-\d{2}-\d{2}T/.test(v)) {
+      return { html: esc(fmtIst(v)), cls: 'date-cell', raw: v };
     }
     if (typeof v === 'number' || (typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v) && !/_at$|_id$|_at|date/i.test(colName))) {
       return { html: esc(v), cls: 'num-cell' };

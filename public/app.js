@@ -327,26 +327,54 @@
     const rem = totalMin % 60;
     return rem ? `${h}h ${rem}m` : `${h}h`;
   }
+  const TZ = 'Asia/Kolkata';
+
+  function nowIst() {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date()).reduce((o, p) => (o[p.type] = p.value, o), {});
+    return parts;
+  }
+
   function fmtT(iso) {
     if (!iso) return 'N/A';
-    try { return new Date(iso).toLocaleString('en-US', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }); }
-    catch { return iso; }
+    try {
+      return new Date(iso).toLocaleString('en-GB', {
+        timeZone: TZ,
+        day: '2-digit', month: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+      }) + ' IST';
+    } catch { return iso; }
   }
   function fmtBrief(iso) {
     if (!iso) return '';
-    try { return new Date(iso).toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', hour12:false }); }
-    catch { return ''; }
+    try {
+      return new Date(iso).toLocaleTimeString('en-GB', {
+        timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false
+      });
+    } catch { return ''; }
+  }
+
+  function istYmd(d) {
+    const p = new Intl.DateTimeFormat('en-CA', {
+      timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(d).reduce((o, x) => (o[x.type] = x.value, o), {});
+    return `${p.year}-${p.month}-${p.day}`;
   }
 
   function fmtWhen(iso) {
     if (!iso) return '';
     try {
       const d = new Date(iso);
-      const now = new Date();
-      const sameDay = d.toDateString() === now.toDateString();
-      const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+      const sameDay = istYmd(d) === istYmd(new Date());
+      const time = d.toLocaleTimeString('en-GB', {
+        timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false
+      });
       if (sameDay) return time;
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' · ' + time;
+      const date = d.toLocaleDateString('en-GB', {
+        timeZone: TZ, day: '2-digit', month: 'short'
+      });
+      return `${date} · ${time}`;
     } catch { return ''; }
   }
 
