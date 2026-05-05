@@ -49,14 +49,20 @@ function buildAlert(daysAgo, forcedType) {
   const entityType = forcedType || pick(ENTITY_TYPES);
   const [id, baseName] = pick(ENTITIES[entityType]);
   const score = 5 + Math.floor(Math.random() * 95);
-  const dayStart = new Date();
+  const now = new Date();
+  const dayStart = new Date(now);
   dayStart.setDate(dayStart.getDate() - daysAgo);
   dayStart.setHours(0, 0, 0, 0);
-  const offset = Math.floor(Math.random() * 86400000);
+  const dayEnd = new Date(dayStart.getTime() + 86400000 - 1);
+  // never schedule beyond "now" — clamp the window for today/future days
+  const upper = Math.min(dayEnd.getTime(), now.getTime());
+  const window = Math.max(1, upper - dayStart.getTime());
+  const offset = Math.floor(Math.random() * window);
   const startedAt = new Date(dayStart.getTime() + offset);
   const isResolved = Math.random() < 0.5;
+  const maxResolutionMs = Math.max(60_000, now.getTime() - startedAt.getTime());
   const endedAt = isResolved
-    ? new Date(startedAt.getTime() + (10 + Math.floor(Math.random() * 240)) * 60000).toISOString()
+    ? new Date(startedAt.getTime() + Math.min(maxResolutionMs, (10 + Math.floor(Math.random() * 240)) * 60000)).toISOString()
     : null;
   const refSrt = +(80 + Math.random() * 18).toFixed(2);
   const srtDuring = +(refSrt - (5 + Math.random() * 35)).toFixed(2);
