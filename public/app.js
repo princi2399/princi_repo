@@ -174,16 +174,22 @@
     if (s.success_rate_during_downtime != null) inl.push(`SRT: <strong>${s.success_rate_during_downtime}%</strong>`);
     if (s.duration != null) inl.push(`Dur: <strong>${fmtD(s.duration)}</strong>`);
 
+    const pretty = prettifyEntity(a);
+    const subtitle = entitySubtitle(a);
+
     el.innerHTML = `
       <div class="arow-sum">
         <div class="arow-entity">
-          <span class="ename">${esc(a.entity_name)}</span>
-          <span class="etype">${esc(a.entity_type)}</span>
+          <div class="entity-text">
+            <span class="ename" title="${esc(a.entity_name)}">${esc(pretty)}</span>
+            ${subtitle ? `<span class="esub">${esc(subtitle)}</span>` : ''}
+          </div>
+          <span class="etype etype-${a.entity_type}">${esc(entityTypeLabel(a.entity_type))}</span>
         </div>
         <span class="sev-badge ${a.severity}">${a.severity} · ${a.criticality_score}</span>
-        <span class="state-badge ${a.current_state}">${on ? '<span class="live-dot"></span>' : ''}${a.current_state}</span>
+        <span class="state-badge ${a.current_state}">${on ? '<span class="live-dot"></span>' : ''}${stateLabel(a.current_state)}</span>
         <div class="arow-stats">${inl.map(s => `<span>${s}</span>`).join('')}</div>
-        <span class="arow-time">${fmtBrief(a.received_at)}</span>
+        <span class="arow-time">${fmtWhen(a.received_at)}</span>
         <svg class="chevron" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
       <div class="arow-detail">${detail(a)}</div>
@@ -330,6 +336,60 @@
     if (!iso) return '';
     try { return new Date(iso).toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', hour12:false }); }
     catch { return ''; }
+  }
+
+  function fmtWhen(iso) {
+    if (!iso) return '';
+    try {
+      const d = new Date(iso);
+      const now = new Date();
+      const sameDay = d.toDateString() === now.toDateString();
+      const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+      if (sameDay) return time;
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' · ' + time;
+    } catch { return ''; }
+  }
+
+  const ENTITY_LABELS = {
+    merchant: 'Merchant',
+    acquirer: 'Acquirer',
+    issuer: 'Issuer',
+    scheme: 'Scheme'
+  };
+  function entityTypeLabel(t) { return ENTITY_LABELS[t] || (t ? String(t).toUpperCase() : 'OTHER'); }
+  function stateLabel(s) {
+    if (s === 'ongoing') return 'Ongoing';
+    if (s === 'resolved') return 'Resolved';
+    return s ? s[0].toUpperCase() + s.slice(1) : '';
+  }
+
+  function titleCase(s) {
+    return String(s).replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ').trim()
+      .split(' ')
+      .map(w => w.length > 3 ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w.toUpperCase())
+      .join(' ');
+  }
+
+  function prettifyEntity(a) {
+    const raw = (a.entity_name || a.merchant_name || a.entity_identifier || 'Unknown').trim();
+    // Take the first segment before "(" or "-" (preserves things like "UPISI" intact)
+    const head = raw.split(/[(\-]/)[0].trim();
+    if (!head) return raw;
+    // Strip trailing digits like "airtel66" -> "airtel"
+    const cleaned = head.replace(/\d+$/, '').trim() || head;
+    // If cleaned is all-uppercase acronym, keep as-is; else title-case
+    return /^[A-Z0-9 ]+$/.test(cleaned) ? cleaned : titleCase(cleaned);
+  }
+
+  function entitySubtitle(a) {
+    const parts = [];
+    // Try to surface merchant/PG ID from entity_name like "name(12345)-detail"
+    const idMatch = (a.entity_name || '').match(/\((\d+)\)/);
+    if (idMatch) parts.push('ID ' + idMatch[1]);
+    if (a.metric) parts.push(titleCase(a.metric));
+    if (a.product) parts.push(a.product);
+    return parts.join(' · ');
   }
 
   $('#btnApplyDate').onclick = () => {

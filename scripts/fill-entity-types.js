@@ -1,39 +1,36 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
 /**
- * Fill days 2-7 ago with synthetic Overwatch alerts so the 7-day view has data.
- * Each alert is prefixed [TEST] so it's easy to delete later.
+ * Generate synthetic alerts for acquirer / issuer / scheme entity types
+ * so all four UI filter categories have visible data.
  *
- *   TARGETS=http://localhost:3001,https://princi-repo.onrender.com node scripts/fill-week.js
+ *   TARGETS=http://localhost:3001,https://princi-repo.onrender.com \
+ *   PER_TYPE=10 DAYS_BACK=7 \
+ *   node scripts/fill-entity-types.js
  */
-const TARGETS = (process.env.TARGETS || 'http://localhost:3001')
+const TARGETS = (process.env.TARGETS || 'http://localhost:3001,https://princi-repo.onrender.com')
   .split(',').map(s => s.trim().replace(/\/$/, '')).filter(Boolean);
-const PER_DAY = parseInt(process.env.PER_DAY || '5', 10);
+const PER_TYPE = parseInt(process.env.PER_TYPE || '10', 10);
 const DAYS_BACK = parseInt(process.env.DAYS_BACK || '7', 10);
 
 const ENTITIES = {
-  merchant: [
-    ['mer_swiggy', 'Swiggy'], ['mer_zomato', 'Zomato'],
-    ['mer_meesho', 'Meesho'], ['mer_flipkart', 'Flipkart'],
-    ['mer_myntra', 'Myntra'], ['mer_indigo', 'IndiGo'],
-    ['mer_snapdeal', 'Snapdeal'], ['mer_bbb', 'BigBasket']
-  ],
   acquirer: [
-    ['acq_hdfc', 'HDFC Acquirer'], ['acq_icici', 'ICICI Acquirer'],
-    ['acq_axis', 'Axis Acquirer'], ['acq_sbi', 'SBI Acquirer'],
-    ['acq_yes', 'Yes Bank Acquirer']
+    ['acq_hdfc', 'HDFC Bank'], ['acq_icici', 'ICICI Bank'],
+    ['acq_axis', 'Axis Bank'], ['acq_sbi', 'State Bank of India'],
+    ['acq_kotak', 'Kotak Mahindra Bank'], ['acq_yes', 'Yes Bank']
   ],
   issuer: [
-    ['iss_hdfc', 'HDFC Issuer'], ['iss_icici', 'ICICI Issuer'],
-    ['iss_kotak', 'Kotak Issuer'], ['iss_pnb', 'PNB Issuer'],
-    ['iss_indusind', 'IndusInd Issuer']
+    ['iss_hdfc', 'HDFC Issuer'], ['iss_sbi', 'SBI Card'],
+    ['iss_amex', 'American Express'], ['iss_icici', 'ICICI Cards'],
+    ['iss_axis', 'Axis Bank Cards'], ['iss_rbl', 'RBL Bank']
   ],
   scheme: [
-    ['sch_visa', 'VISA'], ['sch_mc', 'Mastercard'],
-    ['sch_rupay', 'RuPay'], ['sch_amex', 'Amex'], ['sch_diners', 'Diners']
+    ['sch_visa', 'Visa'], ['sch_mc', 'Mastercard'],
+    ['sch_rupay', 'RuPay'], ['sch_amex', 'Amex Network'],
+    ['sch_diners', 'Diners Club']
   ]
 };
-const ENTITY_TYPES = Object.keys(ENTITIES);
+
 const products = ['PayuBizTransactionEngine', 'PayuMoney', 'PayuCheckout'];
 const metrics = ['success_rate', 'failure_rate', 'srt_drop', 'latency'];
 
@@ -45,8 +42,7 @@ function uuid() {
   });
 }
 
-function buildAlert(daysAgo, forcedType) {
-  const entityType = forcedType || pick(ENTITY_TYPES);
+function buildAlert(entityType, daysAgo) {
   const [id, baseName] = pick(ENTITIES[entityType]);
   const score = 5 + Math.floor(Math.random() * 95);
   const dayStart = new Date();
@@ -71,11 +67,10 @@ function buildAlert(daysAgo, forcedType) {
     metric: pick(metrics),
     entity_identifier: id,
     entity_type: entityType,
-    entity_name: baseName,
-    merchant_name: entityType === 'merchant' ? baseName : undefined,
+    entity_name: `[TEST] ${baseName}`,
     started_at: startedAt.toISOString(),
     ended_at: endedAt,
-    current_state: isResolved ? 'recovered' : 'ongoing',
+    current_state: isResolved ? 'resolved' : 'ongoing',
     criticality_score: score,
     stats: {
       failed_count: 100 + Math.floor(Math.random() * 8000),
@@ -102,25 +97,19 @@ async function postAll(alert) {
   ));
 }
 
-async function main() {
-  console.log(`Filling days 1..${DAYS_BACK - 1} ago with ${PER_DAY} alerts each → ${TARGETS.join(', ')}`);
+(async () => {
+  console.log(`Targets: ${TARGETS.join(', ')}`);
   const all = [];
-  for (let d = 0; d < DAYS_BACK; d++) {
-    for (let i = 0; i < PER_DAY; i++) {
-      // round-robin across entity types so each filter has data on each day
-      const t = ENTITY_TYPES[i % ENTITY_TYPES.length];
-      all.push(buildAlert(d, t));
+  for (const type of Object.keys(ENTITIES)) {
+    for (let i = 0; i < PER_TYPE; i++) {
+      const day = Math.floor(Math.random() * DAYS_BACK);
+      all.push(buildAlert(type, day));
     }
   }
-  // post oldest first so insertion id ordering matches event-time DESC on old-code servers
   all.sort((a, b) => new Date(a.received_at) - new Date(b.received_at));
-  let ok = 0;
   for (let i = 0; i < all.length; i++) {
     await postAll(all[i]);
-    ok++;
     if ((i + 1) % 5 === 0) console.log(`  ${i + 1}/${all.length}`);
   }
-  console.log(`Done. ${ok} alerts posted.`);
-}
-
-main();
+  console.log(`Done. ${all.length} alerts (${PER_TYPE} per type × ${Object.keys(ENTITIES).length} types).`);
+})();

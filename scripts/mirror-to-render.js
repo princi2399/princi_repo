@@ -25,11 +25,11 @@ function normalizeState(s) {
 function normalizeEntityType(t) {
   if (!t) return 'merchant';
   const v = String(t).toLowerCase().trim();
-  if (v.includes('merchant')) return 'merchant';
-  if (v.includes('acquirer') || v.includes('pg_id') || v.includes('bank')) return 'acquirer';
   if (v.includes('issuer')) return 'issuer';
-  if (v.includes('scheme') || v.includes('card')) return 'scheme';
-  return v;
+  if (v.includes('acquirer') || v === 'pg' || v.includes('pg_id') || v.includes('acquiring_bank')) return 'acquirer';
+  if (v.includes('scheme') || v.includes('network') || v === 'mode' || v.includes('card_type')) return 'scheme';
+  if (v.includes('merchant') || v === 'mid' || v === 'ibibo_code') return 'merchant';
+  return 'merchant';
 }
 
 async function fetchAll() {

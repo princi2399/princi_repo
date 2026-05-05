@@ -355,16 +355,25 @@ body {
 
 .arow-sum:hover { background: rgba(255,255,255,0.03); }
 
-.arow-entity { display: flex; align-items: center; gap: 8px; min-width: 140px; }
+.arow-entity { display: flex; align-items: center; gap: 10px; min-width: 200px; max-width: 360px; }
 
-.ename { font-size: 14px; font-weight: 700; white-space: nowrap; color: #fff; }
+.entity-text { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.ename { font-size: 14px; font-weight: 700; color: #fff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
+.esub { font-size: 11px; color: rgba(255,255,255,0.45); font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px;
+  letter-spacing: 0.2px; }
 
 .etype {
-  padding: 2px 8px; border-radius: 10px; font-size: 9px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.5px;
-  background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.4);
-  border: 1px solid rgba(255,255,255,0.08); white-space: nowrap; flex-shrink: 0;
+  padding: 3px 9px; border-radius: 10px; font-size: 9px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.6px;
+  background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.55);
+  border: 1px solid rgba(255,255,255,0.10); white-space: nowrap; flex-shrink: 0;
 }
+.etype-merchant { background: rgba(20,184,166,0.10); color: #5eead4; border-color: rgba(20,184,166,0.25); }
+.etype-acquirer { background: rgba(96,165,250,0.10); color: #93c5fd; border-color: rgba(96,165,250,0.25); }
+.etype-issuer   { background: rgba(167,139,250,0.10); color: #c4b5fd; border-color: rgba(167,139,250,0.25); }
+.etype-scheme   { background: rgba(244,114,182,0.10); color: #f9a8d4; border-color: rgba(244,114,182,0.25); }
 
 .sev-badge {
   padding: 3px 10px; border-radius: 5px; font-size: 11px; font-weight: 700;
@@ -397,8 +406,8 @@ body {
 .arow-stats strong { color: rgba(255,255,255,0.85); font-weight: 600; font-family: var(--mono); font-size: 12px; }
 
 .arow-time {
-  font-size: 11px; color: rgba(255,255,255,0.3); font-family: var(--mono);
-  white-space: nowrap; flex-shrink: 0;
+  font-size: 11px; color: rgba(255,255,255,0.45); font-family: var(--mono);
+  white-space: nowrap; flex-shrink: 0; min-width: 90px; text-align: right;
 }
 
 .chevron {

@@ -141,13 +141,13 @@ function normalizeState(s) {
   return v;
 }
 function normalizeEntityType(t) {
-  if (!t) return 'unknown';
-  const v = String(t).toLowerCase();
-  if (v.includes('merchant')) return 'merchant';
-  if (v.includes('acquirer') || v.includes('pg_') || v === 'pg') return 'acquirer';
-  if (v.includes('issuer') || v.includes('bank')) return 'issuer';
-  if (v.includes('scheme') || v.includes('network')) return 'card_scheme';
-  return v;
+  if (!t) return 'merchant';
+  const v = String(t).toLowerCase().trim();
+  if (v.includes('issuer')) return 'issuer';
+  if (v.includes('acquirer') || v === 'pg' || v.includes('pg_id') || v.includes('acquiring_bank')) return 'acquirer';
+  if (v.includes('scheme') || v.includes('network') || v === 'mode' || v.includes('card_type')) return 'scheme';
+  if (v.includes('merchant') || v === 'mid' || v === 'ibibo_code') return 'merchant';
+  return 'merchant';
 }
 
 function processAlert(payload, source = 'webhook') {
