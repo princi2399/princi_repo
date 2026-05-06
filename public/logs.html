@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Webhook Logs · PayU Overwatch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/logs.css" />
+</head>
+<body class="logs-page">
+  <header class="logs-header">
+    <div class="logs-header-inner">
+      <a href="/" class="logs-back">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Back to Dashboard
+      </a>
+      <div class="logs-title">
+        <span class="logs-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2"/><polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2"/><polyline points="10,9 9,9 8,9" stroke="currentColor" stroke-width="2"/></svg>
+        </span>
+        Webhook Logs
+      </div>
+      <div class="logs-meta" id="logsMeta">Loading…</div>
+    </div>
+  </header>
+
+  <main class="logs-main">
+    <div class="logs-toolbar">
+      <div class="logs-tool-group">
+        <label>Show</label>
+        <select id="logLimit">
+          <option>25</option><option selected>50</option><option>100</option><option>200</option>
+        </select>
+        <label>entries</label>
+      </div>
+      <div class="logs-tool-group">
+        <label>Status</label>
+        <select id="logStatusFilter">
+          <option value="all">All</option>
+          <option value="success">Success</option>
+          <option value="rejected">Rejected</option>
+          <option value="error">Error</option>
+        </select>
+      </div>
+      <div class="logs-tool-spacer"></div>
+      <div class="logs-pager">
+        <button id="prevBtn" class="logs-btn">‹ Prev</button>
+        <span id="pageInfo" class="logs-page-info">—</span>
+        <button id="nextBtn" class="logs-btn">Next ›</button>
+      </div>
+      <button id="refreshBtn" class="logs-btn primary">↻ Refresh</button>
+    </div>
+
+    <div class="logs-table-wrap" id="logsWrap">
+      <div class="logs-loading">Loading webhook logs…</div>
+    </div>
+  </main>
+
+  <script src="/logs.js"></script>
+</body>
+</html>

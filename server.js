@@ -247,22 +247,56 @@ async function bootstrap() {
 
   function handleWebhook(source) {
     return async (req, res) => {
+      const logEntry = {
+        timestamp: new Date().toISOString(),
+        method: req.method,
+        path: req.originalUrl || req.path,
+        source,
+        ip: req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '',
+        content_type: req.headers['content-type'] || '',
+        headers: {
+          'content-type': req.headers['content-type'],
+          'user-agent': req.headers['user-agent'],
+          'x-forwarded-for': req.headers['x-forwarded-for'],
+          'host': req.headers['host']
+        },
+        body: null,
+        extracted_alert_id: null,
+        processing_status: 'pending',
+        processing_message: null,
+        response_code: 200
+      };
+
       let body = req.body;
       if (typeof body === 'string') body = tryParseJSON(body) || body;
       if (Buffer.isBuffer(body)) body = tryParseJSON(body.toString()) || body;
+      logEntry.body = body;
 
       const payload = extractOverwatchPayload(body);
       if (!payload || typeof payload !== 'object') {
         console.log(`[WARN] Invalid payload from ${source}:`, typeof body);
+        logEntry.processing_status = 'rejected';
+        logEntry.processing_message = 'Could not extract alert structure';
+        logEntry.response_code = 200;
+        try { await store.insertLog(logEntry); } catch (e) { console.error('[LOG]', e.message); }
         return res.status(200).json({ status: 'received_raw', warning: 'Could not extract alert structure', source });
       }
 
       const alert = processAlert(payload, source);
+      logEntry.extracted_alert_id = alert.alert_id;
       try {
         await persistAndBroadcast(alert);
+        logEntry.processing_status = 'success';
+        logEntry.processing_message = `Stored alert ${alert.alert_id}`;
+        logEntry.response_code = 200;
+        try { await store.insertLog(logEntry); } catch (e) { console.error('[LOG]', e.message); }
         res.status(200).json({ status: 'received', alert_id: alert.alert_id, source });
       } catch (err) {
         console.error('[ERR] store.insert', err);
+        logEntry.processing_status = 'error';
+        logEntry.processing_message = err.message;
+        logEntry.response_code = 500;
+        try { await store.insertLog(logEntry); } catch (e) { console.error('[LOG]', e.message); }
         res.status(500).json({ status: 'error', message: err.message });
       }
     };
@@ -395,6 +429,25 @@ async function bootstrap() {
     }
   });
 
+  app.get('/api/webhook-logs', async (req, res) => {
+    try {
+      const { limit, offset, from, to } = req.query;
+      const result = await store.fetchLogs({ limit, offset, from, to });
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/webhook-logs/stats', async (_req, res) => {
+    try {
+      const result = await store.fetchLogs({ limit: 1 });
+      res.json({ total: result.total });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.delete('/api/alerts', async (_req, res) => {
     try {
       await store.deleteAll();
@@ -411,6 +464,8 @@ async function bootstrap() {
     try {
       const n = await store.purge();
       if (n > 0) console.log(`[PURGE] Removed ${n} alerts older than ${RETENTION_DAYS} days`);
+      const nLogs = await store.purgeLogs();
+      if (nLogs > 0) console.log(`[PURGE] Removed ${nLogs} webhook logs older than ${RETENTION_DAYS} days`);
     } catch (e) {
       console.error('[PURGE]', e.message);
     }
@@ -445,6 +500,10 @@ async function bootstrap() {
 
   app.get('/db', (_req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'db.html'));
+  });
+
+  app.get('/logs', (_req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'logs.html'));
   });
 
   app.get('*', (_req, res) => {

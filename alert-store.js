@@ -35,6 +35,72 @@ function mapRow(row) {
   };
 }
 
+function createSqliteWebhookLogs(db, retentionDays) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS webhook_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      timestamp TEXT NOT NULL,
+      method TEXT,
+      path TEXT,
+      source TEXT,
+      ip TEXT,
+      content_type TEXT,
+      headers_json TEXT,
+      body_json TEXT,
+      extracted_alert_id TEXT,
+      processing_status TEXT,
+      processing_message TEXT,
+      response_code INTEGER
+    )
+  `);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_whlogs_ts ON webhook_logs (timestamp DESC)');
+
+  const insertLog = db.prepare(`
+    INSERT INTO webhook_logs
+      (timestamp, method, path, source, ip, content_type, headers_json, body_json,
+       extracted_alert_id, processing_status, processing_message, response_code)
+    VALUES
+      (@timestamp, @method, @path, @source, @ip, @content_type, @headers_json, @body_json,
+       @extracted_alert_id, @processing_status, @processing_message, @response_code)
+  `);
+
+  return {
+    async insertLog(entry) {
+      insertLog.run({
+        timestamp: entry.timestamp,
+        method: entry.method,
+        path: entry.path,
+        source: entry.source,
+        ip: entry.ip,
+        content_type: entry.content_type,
+        headers_json: JSON.stringify(entry.headers || {}),
+        body_json: JSON.stringify(entry.body ?? null),
+        extracted_alert_id: entry.extracted_alert_id || null,
+        processing_status: entry.processing_status || 'unknown',
+        processing_message: entry.processing_message || null,
+        response_code: entry.response_code || 200
+      });
+    },
+    async fetchLogs({ limit = 100, offset = 0, from, to } = {}) {
+      let sql = 'SELECT * FROM webhook_logs WHERE 1=1';
+      const params = {};
+      if (from) { sql += ' AND timestamp >= @from'; params.from = from; }
+      if (to) { sql += ' AND timestamp <= @to'; params.to = to; }
+      sql += ' ORDER BY id DESC LIMIT @limit OFFSET @offset';
+      params.limit = Math.min(Math.max(parseInt(limit, 10) || 100, 1), 500);
+      params.offset = Math.max(parseInt(offset, 10) || 0, 0);
+      const rows = db.prepare(sql).all(params);
+      const total = db.prepare('SELECT COUNT(*) as c FROM webhook_logs').get().c;
+      return { total, rows };
+    },
+    async purgeLogs() {
+      const cutoff = new Date(Date.now() - retentionDays * 86400000).toISOString();
+      const { changes } = db.prepare('DELETE FROM webhook_logs WHERE timestamp < ?').run(cutoff);
+      return changes;
+    }
+  };
+}
+
 function createSqliteStore(retentionDays) {
   const envPath = (process.env.SQLITE_PATH || '').trim();
   const DB_PATH = envPath
@@ -71,6 +137,8 @@ function createSqliteStore(retentionDays) {
   `);
   db.exec('CREATE INDEX IF NOT EXISTS idx_alerts_received_at ON alerts (received_at DESC)');
 
+  const whLogs = createSqliteWebhookLogs(db, retentionDays);
+
   const insertStmt = db.prepare(`
     INSERT OR REPLACE INTO alerts
       (alert_id, alert_group_id, notification_id, notification_triggered_at,
@@ -88,6 +156,9 @@ function createSqliteStore(retentionDays) {
     kind: 'sqlite',
     retentionDays,
     location: DB_PATH,
+    insertLog: whLogs.insertLog,
+    fetchLogs: whLogs.fetchLogs,
+    purgeLogs: whLogs.purgeLogs,
     async insert(alert) {
       insertStmt.run({
         alert_id: alert.alert_id,
@@ -223,10 +294,15 @@ function createPgStore(pool, retentionDays) {
       received_at = EXCLUDED.received_at
   `;
 
+  const whLogs = createPgWebhookLogs(pool, retentionDays);
+
   return {
     kind: 'postgres',
     retentionDays,
     pool,
+    insertLog: whLogs.insertLog,
+    fetchLogs: whLogs.fetchLogs,
+    purgeLogs: whLogs.purgeLogs,
     async insert(alert) {
       const vals = [
         alert.alert_id,
@@ -344,6 +420,50 @@ function createPgStore(pool, retentionDays) {
   };
 }
 
+function createPgWebhookLogs(pool, retentionDays) {
+  return {
+    async insertLog(entry) {
+      await pool.query(`
+        INSERT INTO webhook_logs
+          (timestamp, method, path, source, ip, content_type, headers_json, body_json,
+           extracted_alert_id, processing_status, processing_message, response_code)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+      `, [
+        entry.timestamp,
+        entry.method,
+        entry.path,
+        entry.source,
+        entry.ip,
+        entry.content_type,
+        JSON.stringify(entry.headers || {}),
+        JSON.stringify(entry.body ?? null),
+        entry.extracted_alert_id || null,
+        entry.processing_status || 'unknown',
+        entry.processing_message || null,
+        entry.response_code || 200
+      ]);
+    },
+    async fetchLogs({ limit = 100, offset = 0, from, to } = {}) {
+      const params = [];
+      let i = 1;
+      let sql = 'SELECT * FROM webhook_logs WHERE 1=1';
+      if (from) { sql += ` AND timestamp >= $${i++}`; params.push(from); }
+      if (to) { sql += ` AND timestamp <= $${i++}`; params.push(to); }
+      sql += ` ORDER BY id DESC LIMIT $${i++} OFFSET $${i}`;
+      params.push(Math.min(Math.max(parseInt(limit, 10) || 100, 1), 500));
+      params.push(Math.max(parseInt(offset, 10) || 0, 0));
+      const { rows } = await pool.query(sql, params);
+      const totalR = await pool.query('SELECT COUNT(*)::int AS c FROM webhook_logs');
+      return { total: totalR.rows[0].c, rows };
+    },
+    async purgeLogs() {
+      const cutoff = new Date(Date.now() - retentionDays * 86400000).toISOString();
+      const r = await pool.query('DELETE FROM webhook_logs WHERE timestamp < $1', [cutoff]);
+      return r.rowCount ?? 0;
+    }
+  };
+}
+
 async function initPgSchema(pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS alerts (
@@ -371,6 +491,25 @@ async function initPgSchema(pool) {
     )
   `);
   await pool.query('CREATE INDEX IF NOT EXISTS idx_alerts_received_at ON alerts (received_at DESC)');
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS webhook_logs (
+      id BIGSERIAL PRIMARY KEY,
+      timestamp TIMESTAMPTZ NOT NULL,
+      method TEXT,
+      path TEXT,
+      source TEXT,
+      ip TEXT,
+      content_type TEXT,
+      headers_json TEXT,
+      body_json TEXT,
+      extracted_alert_id TEXT,
+      processing_status TEXT,
+      processing_message TEXT,
+      response_code INTEGER
+    )
+  `);
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_whlogs_ts ON webhook_logs (timestamp DESC)');
 }
 
 async function createAlertStore(retentionDays) {
