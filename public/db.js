@@ -58,29 +58,16 @@
     return { html: esc(v), cls: '' };
   }
 
-  function renderTable(container, columns, rows, opts = {}) {
+  function renderTable(container, columns, rows) {
     if (!rows.length) {
       container.innerHTML = '<div class="db-empty">No rows.</div>';
       return;
     }
-    const showActions = opts.actions && (opts.table === 'alerts' || opts.table === 'webhook_logs');
     let html = '<table class="db-table"><thead><tr>';
-    if (showActions) html += '<th class="db-actions-col">Actions</th>';
     for (const c of columns) html += `<th>${esc(c)}</th>`;
     html += '</tr></thead><tbody>';
     for (const r of rows) {
       html += '<tr>';
-      if (showActions) {
-        const target = opts.table === 'alerts'
-          ? { type: 'alert', id: r.alert_id, label: r.alert_id }
-          : { type: 'log', id: r.id, label: `log #${r.id}` };
-        html += `<td class="db-actions">
-          <button class="db-row-del" data-type="${target.type}" data-id="${esc(target.id)}" data-label="${esc(target.label)}" title="Delete this row">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Delete
-          </button>
-        </td>`;
-      }
       for (const c of columns) {
         const cell = formatCellValue(r[c], c);
         const dataAttr = cell.raw !== undefined
@@ -96,37 +83,6 @@
     container.querySelectorAll('td.json-cell').forEach(td => {
       td.addEventListener('click', () => openModal(td.dataset.col || 'value', td.dataset.raw || ''));
     });
-
-    container.querySelectorAll('.db-row-del').forEach(btn => {
-      btn.addEventListener('click', () => handleRowDelete(btn));
-    });
-  }
-
-  async function handleRowDelete(btn) {
-    const type = btn.dataset.type;
-    const id = btn.dataset.id;
-    const label = btn.dataset.label || id;
-    if (!id) return;
-    const confirmMsg = type === 'alert'
-      ? `Delete alert "${label}"?\n\nThis cannot be undone.`
-      : `Delete webhook log #${id}?\n\nThis cannot be undone.`;
-    if (!confirm(confirmMsg)) return;
-    btn.disabled = true;
-    btn.textContent = 'Deleting…';
-    try {
-      const url = type === 'alert'
-        ? `/api/alerts/${encodeURIComponent(id)}`
-        : `/api/webhook-logs/${encodeURIComponent(id)}`;
-      const r = await fetch(url, { method: 'DELETE' });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
-      await loadRows();
-      await loadInfo();
-    } catch (e) {
-      alert('Delete failed: ' + e.message);
-      btn.disabled = false;
-      btn.textContent = 'Delete';
-    }
   }
 
   function openModal(name, raw) {
@@ -219,7 +175,7 @@
       return;
     }
     state.total = j.total;
-    renderTable($('#rowsWrap'), j.columns, j.rows, { actions: true, table: state.table });
+    renderTable($('#rowsWrap'), j.columns, j.rows);
     const start = j.total === 0 ? 0 : j.offset + 1;
     const end = Math.min(j.offset + j.limit, j.total);
     $('#pageInfo').textContent = `${start}–${end} of ${j.total.toLocaleString()}`;

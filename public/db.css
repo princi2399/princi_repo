@@ -162,28 +162,6 @@
   color: rgba(255,255,255,0.4); font-size: 13px;
 }
 
-.db-table th.db-actions-col { width: 88px; }
-.db-table td.db-actions {
-  padding: 6px 10px; vertical-align: middle;
-  white-space: nowrap; max-width: none;
-}
-.db-row-del {
-  display: inline-flex; align-items: center; gap: 5px;
-  background: rgba(248, 113, 113, 0.08);
-  color: #fca5a5;
-  border: 1px solid rgba(248, 113, 113, 0.25);
-  padding: 4px 9px; border-radius: 5px;
-  font-family: var(--font); font-size: 11px; font-weight: 500;
-  cursor: pointer; transition: all .15s;
-}
-.db-row-del:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.18);
-  border-color: rgba(239, 68, 68, 0.5);
-  color: #fff;
-}
-.db-row-del:disabled { opacity: 0.5; cursor: not-allowed; }
-.db-row-del svg { display: block; }
-
 .db-query-help {
   background: rgba(20,184,166,0.06);
   border: 1px solid rgba(20,184,166,0.15);
