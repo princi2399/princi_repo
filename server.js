@@ -401,31 +401,97 @@ async function bootstrap() {
     }
   });
 
-  function isReadOnlySql(raw) {
-    if (!raw || typeof raw !== 'string') return false;
-    const stripped = raw
+  function stripSql(raw) {
+    if (!raw || typeof raw !== 'string') return '';
+    return raw
       .replace(/--.*$/gm, '')
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .trim()
       .replace(/;+\s*$/, '');
-    if (!stripped) return false;
-    if (/;/.test(stripped)) return false;
-    if (!/^(select|with|pragma\s+table_info|explain)\b/i.test(stripped)) return false;
-    if (/\b(insert|update|delete|drop|alter|create|attach|detach|truncate|grant|revoke|vacuum|reindex|replace)\b/i.test(stripped)) return false;
-    return true;
+  }
+
+  function classifySql(raw) {
+    const stripped = stripSql(raw);
+    if (!stripped) return { kind: 'invalid', stripped, error: 'Empty query' };
+    if (/;/.test(stripped)) return { kind: 'invalid', stripped, error: 'Multiple statements not allowed' };
+    if (/^(select|with|pragma\s+table_info|explain)\b/i.test(stripped)) {
+      if (/\b(insert|update|drop|alter|create|attach|detach|truncate|grant|revoke|vacuum|reindex|replace)\b/i.test(stripped)
+          && !/^(with|select|explain|pragma)/i.test(stripped)) {
+        return { kind: 'invalid', stripped, error: 'Read-only statement contains forbidden keywords' };
+      }
+      return { kind: 'read', stripped };
+    }
+    if (/^delete\s+from\b/i.test(stripped)) {
+      const m = stripped.match(/^delete\s+from\s+([a-zA-Z_][\w]*)/i);
+      const table = m ? m[1].toLowerCase() : null;
+      if (!table || !['alerts', 'webhook_logs'].includes(table)) {
+        return { kind: 'invalid', stripped, error: 'DELETE only allowed on alerts or webhook_logs' };
+      }
+      if (!/\bwhere\b/i.test(stripped)) {
+        return { kind: 'invalid', stripped, error: 'DELETE requires a WHERE clause' };
+      }
+      const wherePart = stripped.split(/\bwhere\b/i)[1] || '';
+      if (/\b(1\s*=\s*1|true)\b/i.test(wherePart) && !/\b(alert_id|id|received_at|started_at|notification_triggered_at)\b/i.test(wherePart)) {
+        return { kind: 'invalid', stripped, error: 'DELETE WHERE clause too broad - specify alert_id, id, or a timestamp filter' };
+      }
+      return { kind: 'delete', stripped, table };
+    }
+    return { kind: 'invalid', stripped, error: 'Only SELECT, WITH, EXPLAIN, and DELETE FROM alerts|webhook_logs are allowed' };
   }
 
   app.post('/api/db/query', async (req, res) => {
     try {
       const sql = (req.body && req.body.sql) || '';
-      if (!isReadOnlySql(sql)) {
-        return res.status(400).json({ error: 'Only single read-only SELECT/WITH queries are allowed.' });
+      const c = classifySql(sql);
+      if (c.kind === 'invalid') {
+        return res.status(400).json({ error: c.error });
       }
-      const limited = /\blimit\b/i.test(sql) ? sql : `${sql.replace(/;\s*$/, '')} LIMIT 500`;
+      if (c.kind === 'delete') {
+        const result = await store.exec(c.stripped);
+        for (const client of sseClients) {
+          try { client.write(`data: ${JSON.stringify({ type: 'refresh', reason: 'manual-delete' })}\n\n`); } catch (_) {}
+        }
+        return res.json({
+          columns: ['affected_rows'],
+          rows: [{ affected_rows: result.rowCount }],
+          rowCount: result.rowCount,
+          executionMs: result.executionMs,
+          deleted: true,
+          table: c.table
+        });
+      }
+      const limited = /\blimit\b/i.test(sql) ? sql : `${c.stripped} LIMIT 500`;
       const out = await store.query(limited);
       res.json(out);
     } catch (err) {
       res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.delete('/api/alerts/:alertId', async (req, res) => {
+    try {
+      const id = String(req.params.alertId || '').trim();
+      if (!id) return res.status(400).json({ error: 'alert_id required' });
+      const removed = await store.deleteById(id);
+      if (removed === 0) return res.status(404).json({ error: 'Alert not found', alert_id: id });
+      for (const client of sseClients) {
+        try { client.write(`data: ${JSON.stringify({ type: 'deleted', alert_id: id })}\n\n`); } catch (_) {}
+      }
+      res.json({ status: 'deleted', alert_id: id, removed });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.delete('/api/webhook-logs/:logId', async (req, res) => {
+    try {
+      const id = parseInt(req.params.logId, 10);
+      if (!Number.isFinite(id)) return res.status(400).json({ error: 'numeric log id required' });
+      const removed = await store.deleteLogById(id);
+      if (removed === 0) return res.status(404).json({ error: 'Log not found', id });
+      res.json({ status: 'deleted', id, removed });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
     }
   });
 

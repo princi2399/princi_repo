@@ -73,7 +73,11 @@
 
       <div class="db-pane hidden" id="paneQuery">
         <div class="db-query-help">
-          Read-only. Only single <code>SELECT</code> / <code>WITH</code> / <code>EXPLAIN</code> statements allowed. Auto-limited to 500 rows.
+          Allowed: <code>SELECT</code> / <code>WITH</code> / <code>EXPLAIN</code> (auto-limited to 500 rows)
+          and <code>DELETE FROM alerts WHERE …</code> / <code>DELETE FROM webhook_logs WHERE …</code>
+          (must include WHERE; confirmation required).
+          <br>
+          Examples: <code>DELETE FROM alerts WHERE alert_id = '...'</code> · <code>DELETE FROM webhook_logs WHERE id = 5</code>
         </div>
         <textarea id="sqlBox" class="db-sql" spellcheck="false">SELECT entity_type, current_state, COUNT(*) AS n
 FROM alerts

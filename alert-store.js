@@ -225,6 +225,20 @@ function createSqliteStore(retentionDays) {
     async deleteAll() {
       db.prepare('DELETE FROM alerts').run();
     },
+    async deleteById(alertId) {
+      const { changes } = db.prepare('DELETE FROM alerts WHERE alert_id = ?').run(alertId);
+      return changes;
+    },
+    async deleteLogById(logId) {
+      const { changes } = db.prepare('DELETE FROM webhook_logs WHERE id = ?').run(logId);
+      return changes;
+    },
+    async exec(sql) {
+      const t0 = Date.now();
+      const stmt = db.prepare(sql);
+      const info = stmt.run();
+      return { rowCount: info.changes ?? 0, executionMs: Date.now() - t0 };
+    },
     async purge() {
       const cutoff = new Date(Date.now() - retentionDays * 86400000).toISOString();
       const { changes } = db.prepare('DELETE FROM alerts WHERE received_at < ?').run(cutoff);
@@ -373,6 +387,19 @@ function createPgStore(pool, retentionDays) {
     },
     async deleteAll() {
       await pool.query('DELETE FROM alerts');
+    },
+    async deleteById(alertId) {
+      const r = await pool.query('DELETE FROM alerts WHERE alert_id = $1', [alertId]);
+      return r.rowCount ?? 0;
+    },
+    async deleteLogById(logId) {
+      const r = await pool.query('DELETE FROM webhook_logs WHERE id = $1', [logId]);
+      return r.rowCount ?? 0;
+    },
+    async exec(sql) {
+      const t0 = Date.now();
+      const r = await pool.query(sql);
+      return { rowCount: r.rowCount ?? 0, executionMs: Date.now() - t0 };
     },
     async purge() {
       const cutoff = new Date(Date.now() - retentionDays * 86400000).toISOString();
