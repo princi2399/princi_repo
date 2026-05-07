@@ -2,6 +2,7 @@
   'use strict';
 
   const alerts = [];
+  const openAlerts = new Set();
   let stateF = 'all', sevF = 'all', entF = 'all';
   let dateFrom = '', dateTo = '';
   let es = null;
@@ -98,9 +99,18 @@
       try {
         const d = JSON.parse(e.data);
         if (d.type === 'connected') { fetchAll(); return; }
-        if (d.type === 'cleared') { alerts.length = 0; render(); stats(); return; }
+        if (d.type === 'cleared') { alerts.length = 0; openAlerts.clear(); render(); stats(); return; }
         if (d.type === 'refresh') { fetchAll(); stats(); return; }
+        if (d.type === 'deleted') {
+          const idx = alerts.findIndex(a => a.alert_id === d.alert_id);
+          if (idx >= 0) alerts.splice(idx, 1);
+          openAlerts.delete(d.alert_id);
+          render(); stats();
+          return;
+        }
         d._new = true;
+        const existingIdx = alerts.findIndex(a => a.alert_id === d.alert_id);
+        if (existingIdx >= 0) alerts.splice(existingIdx, 1);
         alerts.unshift(d);
         render(); stats();
       } catch (_) {}
@@ -156,15 +166,22 @@
 
     empty.style.display = 'none';
     list.innerHTML = '';
+    const visibleIds = new Set();
     f.forEach((a, i) => {
+      visibleIds.add(a.alert_id);
       list.appendChild(makeRow(a, i === 0 && a._new));
       a._new = false;
     });
+    for (const id of openAlerts) {
+      if (!visibleIds.has(id)) openAlerts.delete(id);
+    }
   }
 
   function makeRow(a, flash) {
     const el = document.createElement('div');
-    el.className = `arow sev-${a.severity}${flash ? ' flash' : ''}`;
+    const isOpen = openAlerts.has(a.alert_id);
+    el.className = `arow sev-${a.severity}${flash && !isOpen ? ' flash' : ''}${isOpen ? ' open' : ''}`;
+    el.dataset.alertId = a.alert_id;
 
     const s = a.stats || {};
     const on = a.current_state === 'ongoing';
@@ -195,7 +212,11 @@
       <div class="arow-detail">${detail(a)}</div>
     `;
 
-    el.querySelector('.arow-sum').onclick = () => el.classList.toggle('open');
+    el.querySelector('.arow-sum').onclick = () => {
+      el.classList.toggle('open');
+      if (el.classList.contains('open')) openAlerts.add(a.alert_id);
+      else openAlerts.delete(a.alert_id);
+    };
     el.querySelector('.btn-curl').onclick = e => { e.stopPropagation(); clip(curl(a), e.currentTarget); };
     el.querySelector('.btn-json').onclick = e => { e.stopPropagation(); clip(JSON.stringify(a.raw_payload || a, null, 2), e.currentTarget); };
 
